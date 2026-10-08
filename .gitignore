@@ -1,0 +1,37 @@
+# Hackathon reference material (third-party pages) - never publish
+claude_read_this/
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials
+.aws/
+secrets/
+
+# AWS SAM
+.aws-sam/
+samconfig.local.toml
+
+# Node / frontend
+node_modules/
+dist/
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
