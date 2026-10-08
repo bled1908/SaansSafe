@@ -62,6 +62,24 @@ describe("OutlookSection", () => {
     expect(periods[3]).toHaveTextContent("401+");
   });
 
+  it("tags weekend periods from the API's school_day flag, never as school hours", () => {
+    const base = makeForecastResponse();
+    const weekday = { ...base.periods[0]!, label: "Friday morning", school_day: true, school_hours: true };
+    const weekdayNight = { ...base.periods[1]!, label: "Friday night", school_day: true, school_hours: false };
+    const saturday = { ...base.periods[0]!, label: "Saturday morning", start: "2026-10-10T01:00:00Z", school_day: false, school_hours: true };
+    const sundayNight = { ...base.periods[1]!, label: "Sunday night", start: "2026-10-11T13:00:00Z", school_day: false, school_hours: false };
+    render(<OutlookSection state={success({ ...base, periods: [weekday, weekdayNight, saturday, sundayNight] })} onRetry={() => {}} />);
+    const [fri, friNight, sat, sunNight] = screen.getAllByTestId("outlook-period");
+    expect(fri).toHaveTextContent("School hours");
+    expect(friNight).toHaveTextContent("Outside school hours");
+    for (const weekend of [sat!, sunNight!]) {
+      expect(weekend).toHaveTextContent("Weekend · not a school day");
+      expect(weekend).not.toHaveTextContent("School hours");
+    }
+    // The Monday–Friday policy sentence is unchanged.
+    expect(screen.getByText(/treats Monday–Friday as school days/)).toBeInTheDocument();
+  });
+
   it("shows API values without recalculating them in the browser", () => {
     const base = makeForecastResponse();
     // Deliberately inconsistent payload: the UI must echo it, not "correct" it.

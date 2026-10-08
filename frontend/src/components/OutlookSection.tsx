@@ -103,11 +103,17 @@ function HourStrip({ hours }: { hours: ForecastHour[] }) {
   );
 }
 
+/** Presentation of the API's own school_day / school_hours flags (no client-side rules). */
+function periodTag(period: ForecastPeriod): string {
+  if (!period.school_day) return "Weekend · not a school day";
+  return period.school_hours ? "School hours" : "Outside school hours";
+}
+
 function PeriodCards({ periods }: { periods: ForecastPeriod[] }) {
   return (
     <ul
       aria-label="School periods"
-      className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5"
+      className="-mx-4 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:scroll-px-0 sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-5"
     >
       {periods.map((period) => (
         <li
@@ -120,7 +126,7 @@ function PeriodCards({ periods }: { periods: ForecastPeriod[] }) {
             {span(period)} IST{period.partial && " · partial"}
           </p>
           <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-ink/55">
-            {period.school_hours ? "School hours" : "Outside school hours"}
+            {periodTag(period)}
           </p>
           {period.worst && (
             <div className="mt-3 space-y-1">
