@@ -142,6 +142,14 @@ export function errorTitle(error: ApiError): string {
       return "This is taking too long";
     case "invalid_response":
       return "Unexpected response from SaansSafe";
+    case "invalid_school_name":
+      return "Check the school name";
+    case "invalid_request":
+    case "invalid_language":
+    case "payload_too_large":
+      return "That request couldn't be used";
+    case "not_found":
+      return "This feature isn't available yet";
     default:
       return "Something went wrong";
   }

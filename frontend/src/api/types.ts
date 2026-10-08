@@ -1,5 +1,6 @@
 /**
- * Types mirroring the deployed GET /aqi contract (backend/src/saanssafe/api.py).
+ * Types mirroring the GET /aqi, GET /forecast and POST /notice contracts
+ * (backend/src/saanssafe/api.py, notice_api.py).
  * The API is the source of truth: the frontend never calculates AQI, categories,
  * severity or school actions.
  */
@@ -115,6 +116,41 @@ export interface ForecastResponse {
   policy: { name: string; version: string; basis: string };
   freshness: Freshness;
   source: { provider: string; attribution: string };
+}
+
+export type NoticeLanguage = "en" | "hi";
+
+export interface NoticeRequest extends Coordinates {
+  language: NoticeLanguage;
+  school_name?: string;
+}
+
+/** POST /notice: a parent notice written from the backend's verified decision. */
+export interface NoticeResponse {
+  data_type: "forecast_model";
+  language: NoticeLanguage;
+  school_name: string | null;
+  notice: { title: string; body: string; key_points: string[]; sign_off: string };
+  /** Fixed text, never AI-written: verbatim CPCB statement and the disclaimers. */
+  footer: { health_label: string; health_statement: string; health_source: string; disclaimer: string };
+  share_text: string;
+  generated_by: string; // "template" | "bedrock"
+  model: string | null;
+  fallback_reason: string | null;
+  decision: { action: SchoolAction; severity: Severity; headline: string; policy_version: string };
+  /** The facts the notice was written from (backend NoticeFacts). */
+  grounding: {
+    aqi_display: string;
+    category: CategoryLabel;
+    dominant_pollutant_name: string;
+    policy_name: string;
+    policy_version: string;
+    [key: string]: unknown;
+  };
+  valid_for_hour: string;
+  freshness: { status: "fresh" | "stale"; age_minutes: number; warning: string | null };
+  disclaimer: string;
+  cache?: string;
 }
 
 export interface AqiResponse {

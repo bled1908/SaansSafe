@@ -54,7 +54,7 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins: !Ref AllowedOrigins
-        AllowMethods: [GET, OPTIONS]
+        AllowMethods: [GET, POST, OPTIONS]
         AllowHeaders: [Content-Type]
         MaxAge: 600
       DefaultRouteSettings:
@@ -113,6 +113,50 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${ApiFunction}
       RetentionInDays: !Ref LogRetentionDays
 
+  # POST /notice: deterministic parent notice (template). Same dependency-free code as
+  # ApiFunction; no strands-agents is packaged and AI wording is disabled. No Bedrock access.
+  NoticeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: POST /notice (deterministic parent notice from the school safety decision)
+      CodeUri: src/
+      Handler: saanssafe.notice_api.handler
+      Runtime: python3.13
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 25 # current AQI + 72 h outlook (Open-Meteo, 8 s timeout) + DynamoDB; < HTTP API 30 s
+      Environment:
+        Variables:
+          AQI_CACHE_TABLE: !Ref AqiCacheTable
+          CACHE_FRESH_MINUTES: !Ref CacheFreshMinutes
+          CACHE_MAX_STALE_HOURS: !Ref CacheMaxStaleHours
+          OPEN_METEO_TIMEOUT_S: !Ref OpenMeteoTimeoutSeconds
+          NOTICE_AI_ENABLED: "false"
+          NOTICE_CACHE_MINUTES: "60"
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: !GetAtt AqiCacheTable.Arn
+      Events:
+        Notice:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /notice
+            Method: POST
+
+  NoticeFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${NoticeFunction}
+      RetentionInDays: !Ref LogRetentionDays
+
 Outputs:
   ApiUrl:
     Description: Base URL of the HTTP API ($default stage)
@@ -129,3 +173,6 @@ Outputs:
   ApiFunctionName:
     Description: Lambda function (for logs)
     Value: !Ref ApiFunction
+  NoticeFunctionName:
+    Description: Parent notice Lambda function (for logs)
+    Value: !Ref NoticeFunction

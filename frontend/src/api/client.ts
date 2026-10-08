@@ -1,4 +1,4 @@
-import type { AqiResponse, Coordinates, ForecastResponse } from "./types";
+import type { AqiResponse, Coordinates, ForecastResponse, NoticeRequest, NoticeResponse } from "./types";
 
 export const DEFAULT_API_BASE_URL = "https://paqffn4eq5.execute-api.ap-south-1.amazonaws.com";
 export const DEFAULT_TIMEOUT_MS = 15_000;
@@ -10,6 +10,10 @@ export type ApiErrorKind =
   | "upstream_invalid"
   | "upstream_unavailable"
   | "internal_error"
+  | "invalid_request"
+  | "invalid_language"
+  | "invalid_school_name"
+  | "payload_too_large"
   | "not_found"
   | "http_error"
   | "network"
@@ -25,6 +29,10 @@ const KNOWN_API_CODES: ReadonlySet<string> = new Set([
   "upstream_invalid",
   "upstream_unavailable",
   "internal_error",
+  "invalid_request",
+  "invalid_language",
+  "invalid_school_name",
+  "payload_too_large",
 ]);
 
 const RETRYABLE: ReadonlySet<ApiErrorKind> = new Set([
@@ -156,14 +164,69 @@ export function fetchForecast(coords: Coordinates, options: FetchAqiOptions = {}
   return requestJson("/forecast", coords, isForecastResponse, options);
 }
 
+/** Minimal runtime check for the POST /notice fields the notice UI depends on. */
+export function isNoticeResponse(body: unknown): body is NoticeResponse {
+  if (!isRecord(body) || body.data_type !== "forecast_model") return false;
+  const { notice, footer, decision, grounding } = body;
+  return (
+    (body.language === "en" || body.language === "hi") &&
+    typeof body.share_text === "string" &&
+    typeof body.generated_by === "string" &&
+    typeof body.valid_for_hour === "string" &&
+    isRecord(notice) &&
+    typeof notice.title === "string" &&
+    typeof notice.body === "string" &&
+    typeof notice.sign_off === "string" &&
+    Array.isArray(notice.key_points) &&
+    notice.key_points.every((point) => typeof point === "string") &&
+    isRecord(footer) &&
+    typeof footer.health_statement === "string" &&
+    typeof footer.disclaimer === "string" &&
+    isRecord(decision) &&
+    typeof decision.headline === "string" &&
+    isRecord(grounding) &&
+    typeof grounding.aqi_display === "string" &&
+    typeof grounding.category === "string"
+  );
+}
+
+/** POST /notice. Generation is always user-triggered; never call this on page load. */
+export function postNotice(request: NoticeRequest, options: FetchAqiOptions = {}): Promise<NoticeResponse> {
+  const body: NoticeRequest = { lat: request.lat, lon: request.lon, language: request.language };
+  const schoolName = request.school_name?.trim();
+  if (schoolName) body.school_name = schoolName;
+  const { baseUrl = apiBaseUrl() } = options;
+  return send(
+    `${baseUrl}/notice`,
+    {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    isNoticeResponse,
+    options,
+  );
+}
+
 /** Shared GET with timeout, abort, error-shape mapping and a runtime contract check. */
-async function requestJson<T>(
+function requestJson<T>(
   path: string,
   { lat, lon }: Coordinates,
   validate: (body: unknown) => body is T,
-  { signal, timeoutMs = DEFAULT_TIMEOUT_MS, baseUrl = apiBaseUrl(), fetchImpl = fetch }: FetchAqiOptions,
+  options: FetchAqiOptions,
 ): Promise<T> {
+  const { baseUrl = apiBaseUrl() } = options;
   const url = `${baseUrl}${path}?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+  return send(url, { method: "GET", headers: { Accept: "application/json" } }, validate, options);
+}
+
+/** One request with timeout, abort, error-shape mapping and a runtime contract check. */
+async function send<T>(
+  url: string,
+  init: RequestInit,
+  validate: (body: unknown) => body is T,
+  { signal, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = fetch }: FetchAqiOptions,
+): Promise<T> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -177,11 +240,7 @@ async function requestJson<T>(
   let response: Response;
   let text: string;
   try {
-    response = await fetchImpl(url, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    });
+    response = await fetchImpl(url, { ...init, signal: controller.signal });
     text = await response.text();
   } catch {
     if (timedOut) throw new ApiError("timeout", "The request took too long. Please try again.");

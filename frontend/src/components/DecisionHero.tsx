@@ -1,4 +1,4 @@
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, MessageSquareText, ShieldCheck } from "lucide-react";
 import type { AqiResponse } from "../api/types";
 import { formatHourRange, istDayLabel } from "../lib/format";
 import type { SchoolLocation } from "../lib/locations";
@@ -8,10 +8,12 @@ import { AirInstrument } from "./AirInstrument";
 interface Props {
   data: AqiResponse;
   location: SchoolLocation;
+  /** Secondary action: jump to the parent notice. The decision stays the primary content. */
+  onCreateNotice?: () => void;
 }
 
 /** The decision-first hero. Sits on top of the Sky band rendered by App. */
-export function DecisionHero({ data, location }: Props) {
+export function DecisionHero({ data, location, onCreateNotice }: Props) {
   const { decision } = data;
   const stale = decision.data_freshness.status === "stale";
   const headline = /[.!?]$/.test(decision.headline) ? decision.headline : `${decision.headline}.`;
@@ -62,6 +64,17 @@ export function DecisionHero({ data, location }: Props) {
           <span aria-hidden>·</span>
           <span>not a CPCB rule</span>
         </p>
+
+        {onCreateNotice && (
+          <button
+            type="button"
+            onClick={onCreateNotice}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white/70 px-4 text-sm font-semibold text-ink ring-1 ring-ink/15 backdrop-blur-sm hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          >
+            <MessageSquareText aria-hidden className="size-4" />
+            Create parent notice
+          </button>
+        )}
       </div>
 
       <div className="lg:col-span-5 lg:pt-8">

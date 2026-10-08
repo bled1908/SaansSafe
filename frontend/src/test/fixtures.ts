@@ -4,6 +4,7 @@ import type {
   ForecastHour,
   ForecastPeriod,
   ForecastResponse,
+  NoticeResponse,
   SchoolAction,
   Severity,
 } from "../api/types";
@@ -119,7 +120,65 @@ export function makeStaleResponse(): AqiResponse {
   };
 }
 
-type Tier = [display: string, value: number, category: CategoryLabel, severity: Severity, action: SchoolAction, headline: string];
+/** TEST-ONLY fixture shaped like POST /notice (backend template output, Poor, English). */
+export function makeNoticeResponse(overrides: Partial<NoticeResponse> = {}): NoticeResponse {
+  const disclaimer =
+    "Forecast/model estimate for a model grid cell. Not a reading from a CPCB monitoring station. " +
+    "School actions follow the SaansSafe school safety policy (saanssafe-school-v1), a product policy, " +
+    "not a CPCB rule. This is not medical advice.";
+  const base: NoticeResponse = {
+    data_type: "forecast_model",
+    language: "en",
+    school_name: null,
+    notice: {
+      title: "Air quality update for parents · Thu 8 Oct",
+      body:
+        "Dear parents, the forecast/model air quality estimate near the school for Thu 8 Oct, 16:30 IST is " +
+        "AQI 242, in the “Poor” category. The main pollutant is O3 (ground-level ozone).\n\n" +
+        "Under the SaansSafe school safety policy, we will hold assembly indoors and move PE and sports " +
+        "indoors today. Outdoor recess will be kept short, with an indoor option.\n\n" +
+        "The forecast has no full weekday school period to suggest as a better window.",
+      key_points: [
+        "Morning assembly: indoors",
+        "PE and sports: indoors",
+        "Recess and breaks: shorter outdoors, with an indoor option",
+      ],
+      sign_off: "— School administration",
+    },
+    footer: {
+      health_label: "CPCB health statement for the “Poor” category",
+      health_statement:
+        "May cause breathing discomfort to people on prolonged exposure and discomfort to people with heart " +
+        "disease with short exposure",
+      health_source: "CPCB National AQI report CUPS/82/2014-15, Table 3.12",
+      disclaimer,
+    },
+    share_text: "Air quality update for parents · Thu 8 Oct\n\nDear parents, (full notice) — School administration",
+    generated_by: "template",
+    model: null,
+    fallback_reason: "ai_unavailable",
+    decision: {
+      action: "move_strenuous_activities_indoors",
+      severity: "high",
+      headline: "Move assembly, PE and sports indoors",
+      policy_version: "saanssafe-school-v1",
+    },
+    grounding: {
+      aqi_display: "242",
+      category: "Poor",
+      dominant_pollutant_name: "O3 (ground-level ozone)",
+      policy_name: "SaansSafe school safety policy",
+      policy_version: "saanssafe-school-v1",
+    },
+    valid_for_hour: "2026-10-08T11:00:00Z",
+    freshness: { status: "fresh", age_minutes: 33, warning: null },
+    disclaimer,
+    cache: "miss",
+  };
+  return { ...base, ...overrides };
+}
+
+type Tier =[display: string, value: number, category: CategoryLabel, severity: Severity, action: SchoolAction, headline: string];
 
 const MODERATE: Tier = ["150", 150, "Moderate", "moderate", "reduce_outdoor_exertion", "Reduce strenuous outdoor activity"];
 const POOR: Tier = ["248", 248, "Poor", "high", "move_strenuous_activities_indoors", "Move assembly, PE and sports indoors"];

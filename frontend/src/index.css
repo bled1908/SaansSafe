@@ -134,6 +134,28 @@ body {
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Parent notice printing: "Print notice" adds body.print-notice; then only the notice prints. */
+[data-print-notice] {
+  display: none;
+}
+@media print {
+  body.print-notice > :not([data-print-notice]) {
+    display: none !important;
+  }
+  body.print-notice [data-print-notice] {
+    display: block;
+    max-width: 40rem;
+    padding: 1.5rem;
+    font-size: 12pt;
+    line-height: 1.55;
+    color: #000;
+    background: #fff;
+  }
+  body.print-notice [data-print-notice] > * + * {
+    margin-top: 0.75rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

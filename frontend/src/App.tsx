@@ -6,6 +6,7 @@ import { DecisionHero } from "./components/DecisionHero";
 import { PollutantSection } from "./components/PollutantSection";
 import { ProvenanceStrip } from "./components/ProvenanceStrip";
 import { OutlookSection } from "./components/OutlookSection";
+import { ParentNotice } from "./components/ParentNotice";
 import { LocationChip, LocationOptions } from "./components/SchoolPicker";
 import { Sky } from "./components/Sky";
 import { SourceFooter } from "./components/SourceFooter";
@@ -17,6 +18,16 @@ import { formatIstTime } from "./lib/format";
 import type { SchoolLocation } from "./lib/locations";
 
 const REGION = apiRegion();
+
+/** Hero CTA: bring the parent notice section into view and move focus to its heading. */
+function openParentNotice() {
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  document.getElementById("parent-notice")?.scrollIntoView?.({
+    behavior: reduceMotion ? "auto" : "smooth",
+    block: "start",
+  });
+  document.getElementById("notice-title")?.focus({ preventScroll: true });
+}
 
 export default function App() {
   const [location, setLocation] = useState<SchoolLocation | null>(null);
@@ -52,7 +63,9 @@ export default function App() {
           )}
           {location !== null && state.status === "loading" && <LoadingState slow={state.slow} />}
           {location !== null && state.status === "error" && <ErrorState error={state.error} onRetry={retry} />}
-          {location !== null && data && <DecisionHero key={location.id} data={data} location={location} />}
+          {location !== null && data && (
+            <DecisionHero key={location.id} data={data} location={location} onCreateNotice={openParentNotice} />
+          )}
         </div>
       </section>
 
@@ -61,6 +74,7 @@ export default function App() {
           <ProvenanceStrip data={data} region={REGION} />
           <div className="mx-auto max-w-6xl space-y-16 px-4 py-14 sm:px-6 sm:py-20">
             <OutlookSection state={forecast.state} onRetry={forecast.retry} />
+            {location && <ParentNotice key={location.id} coords={location} decision={data.decision} />}
             <TodayChecklist decision={data.decision} />
             <PollutantSection data={data} />
             <WhyDecision data={data} />
