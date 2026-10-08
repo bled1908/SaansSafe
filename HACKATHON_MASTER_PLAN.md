@@ -1,7 +1,7 @@
 # Hackathon Master Plan: Environmental Hacks (Bharat Builds Tour, Event 02)
 
 > Status: **Concept locked: SaansSafe (Air track). AWS account 703321058941 confirmed.**
-> Day-1 milestones: [x] M0 repo setup · [x] M1 AQI + tests (CPCB-verified, 124 passing) · [x] M2 provider/API/cache (Open-Meteo data layer + GET /aqi handler, AqiService and DynamoDB cache; 256 tests, all with fakes; a one-off manual integration check against the live Open-Meteo API with Delhi coordinates passed on 2026-10-08 (not part of the test suite, no AQI value recorded); not deployed. Note: Open-Meteo = CAMS model/forecast data, not CPCB station observations) · [ ] M3 SAM deploy + smoke test · [ ] M4 frontend · [ ] M5 S3+CloudFront live URL
+> Day-1 milestones: [x] M0 repo setup · [x] M1 AQI + tests (CPCB-verified, 124 passing) · [x] M2 provider/API/cache (Open-Meteo data layer + GET /aqi handler, AqiService and DynamoDB cache; 256 tests, all with fakes; a one-off manual integration check against the live Open-Meteo API with Delhi coordinates passed on 2026-10-08 (not part of the test suite, no AQI value recorded); not deployed. Note: Open-Meteo = CAMS model/forecast data, not CPCB station observations) · [~] M3 SAM deploy + smoke test (backend/template.yaml written and validated with `sam validate --lint`; not deployed) · [ ] M4 frontend · [ ] M5 S3+CloudFront live URL
 > Written 2026-10-08 (Day 1). Sources: `claude_read_this/{overview,rules,schedule,mentors,community_partners}.md` and `claude_read_this/previous_winners/*.html` (First Commit, event 01).
 > Future sessions: read this file and `SUBMISSION_CHECKLIST.md` instead of re-reading `claude_read_this/`.
 
@@ -106,7 +106,7 @@ Design principles:
 - **Numbers are deterministic, words come from the LLM.** AQI calculation (CPCB sub-index method) and decisions are pure Python functions with unit tests. The LLM only explains, translates and answers questions, based on tool outputs. This prevents hallucinated AQI values from appearing in the demo.
 - **Cache first.** The ingest Lambda writes to DynamoDB, and the API reads from the cache. If an upstream API is flaky, the demo still works. A seeded "demo snapshot" acts as a last-resort fallback.
 - **Region:** `ap-south-1`. If the chosen model isn't available there, use Bedrock cross-region inference (APAC profile). Check this on Day 1.
-- **Cost:** everything is pay-per-request. Bedrock is the only metered item (cents per day at demo volumes). Set a Budgets alarm.
+- **Cost:** all services are pay-per-use. AWS charges may apply (Lambda, HTTP API, DynamoDB, CloudWatch Logs, the SAM deployment bucket, and later Bedrock), but demo usage is expected to be low. Set a Budgets alarm.
 - **Tooling to install:** SAM CLI (via `winget`/MSI). Docker is optional, since we deploy with `sam deploy` and test logic with pytest locally instead of `sam local`.
 
 ## 7. Prioritized backlog

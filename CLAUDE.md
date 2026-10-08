@@ -10,7 +10,7 @@ Working rules:
 - **Never publish `claude_read_this/`** (third-party pages with personal names). Keep it in `.gitignore`.
 - **Repo history must start after the official kickoff on Oct 8.** Never import pre-existing code. Commit small and often.
 - **Deterministic numbers, LLM words.** AQI calculations and decisions are tested pure functions. The LLM only explains and translates tool outputs.
-- Environment: Windows. AWS CLI is authenticated, region `ap-south-1`. SAM CLI and Docker are **not installed**. Free-tier/pay-per-request services only. No NAT/EC2.
+- Environment: Windows. AWS CLI is authenticated, region `ap-south-1`. SAM CLI is installed as a uv tool (see Commands); Docker is **not installed**. Use pay-per-request services only (AWS charges may apply, but demo usage is expected to be low). No NAT/EC2.
 - The user has a limited Claude usage budget. Avoid broad re-scans, and keep the plan files updated so context isn't rediscovered.
 
 ## Commands
@@ -18,6 +18,7 @@ Working rules:
 Backend (run from `backend/`; uv manages a Python 3.13 venv, matching the Lambda runtime):
 - All tests: `uv run --python 3.13 pytest -q`
 - One test: `uv run --python 3.13 pytest tests/test_aqi.py::test_category_boundaries -q`
+- SAM CLI is a uv tool at `~/.local/bin/sam` (not on PATH in bash). Validate: `~/.local/bin/sam validate --lint` (from `backend/`; settings in `samconfig.toml`: stack `saanssafe-dev`, ap-south-1). There's no `sam build` step: the code has no third-party dependencies, so `CodeUri: src/` is packaged as-is. Deploy command: TBD (not deployed yet).
 
 ## Backend layout
 
@@ -38,7 +39,8 @@ This is the SaansSafe entry for **Environmental Hacks** (WeMakeDevs × AWS, Bhar
 
 - **Implemented and tested:** M0 (repo setup) and M1 (`backend/src/saanssafe/aqi.py`, the CPCB AQI engine, with `backend/tests/test_aqi.py`).
 - **Implemented and tested (M2):** the Open-Meteo data layer (`readings.py`, `providers/`) plus the `/aqi` API, service and DynamoDB cache (`api.py`, `service.py`, `cache.py`), all against fakes.
-- **Not implemented yet:** SAM template/deploy (M3), frontend, hosting. There is no AWS infrastructure and nothing is deployed.
+- **M3 (in progress):** `backend/template.yaml` + `samconfig.toml` are written and pass `sam validate --lint`. **Not deployed:** no AWS resources exist yet.
+- **Not implemented yet:** deployment and smoke test (rest of M3), frontend (M4), hosting (M5).
 - Milestone progress is tracked at the top of `HACKATHON_MASTER_PLAN.md`.
 - The AQI engine's rules were verified against CPCB's report and decided (master plan §12). Change them only with a cited CPCB source.
 

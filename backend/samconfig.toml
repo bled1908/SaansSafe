@@ -1,0 +1,16 @@
+# SAM CLI configuration. No secrets: credentials come from the local AWS profile.
+version = 0.1
+
+[default.global.parameters]
+stack_name = "saanssafe-dev"
+region = "ap-south-1"
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+resolve_s3 = true
+s3_prefix = "saanssafe-dev"
+confirm_changeset = true
+fail_on_empty_changeset = false
