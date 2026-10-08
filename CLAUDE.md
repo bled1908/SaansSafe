@@ -25,13 +25,16 @@ Backend (run from `backend/`; uv manages a Python 3.13 venv, matching the Lambda
   - `rolling_average`: every pollutant needs ≥16 valid hours in the latest 24 (`None` = missing, never filled in). It then averages the latest 24 h, or the **latest** 8 h for O3/CO. "Latest" is our product decision, not a CPCB rule.
   - `sub_index`: CPCB interpolation with I_LO−1 when I_LO > 50. At or above the open-ended Severe threshold it returns 401, with no interpolation.
   - `compute_aqi`: the max sub-index. It needs ≥3 pollutants incl. PM2.5 or PM10, otherwise `InsufficientDataError`. When Severe it sets `beyond_scale=True` and `display="401+"`. **Always show `display`, never a made-up number above 401.**
+- `backend/src/saanssafe/readings.py`: `HourlyReading` (UTC hour, 7 pollutants in engine units, `None` = missing) and `ReadingSeries` (consecutive hours only). **Use `series.hourly_until(t)` to build engine input.** It always returns the 24 hours ending at `t`'s hour and pads uncovered hours with `None`, so stale data becomes insufficient instead of passing as current.
+- `backend/src/saanssafe/providers/`: `base.py` holds the `AirQualityProvider` protocol, `validate_coordinates`, and errors (`ProviderUnavailableError` = retry later, `ProviderRequestError` = 4xx, `ProviderResponseError` = untrustworthy payload). `open_meteo.py` is the Open-Meteo client. Network I/O lives only in `urllib_transport`, and tests inject a fake transport (never hit the network). It requests past_days=1 + forecast_days=3, `timeformat=unixtime`, GMT. It checks the unit is μg/m³, converts CO to mg/m³, and turns absent or null variables into `None` (NH3 is always null for India). **Open-Meteo data are CAMS model forecasts/analyses on a ~0.1° grid, not CPCB ground-station observations.** Label them as "forecast/model AQI" everywhere, including the UI, README and video.
 
 ## Current state
 
 This is the SaansSafe entry for **Environmental Hacks** (WeMakeDevs × AWS, Bharat Builds Tour event 02, Oct 8–11, 2026). `claude_read_this/` holds the event's web pages, saved as text. It is the source of truth for the rules.
 
 - **Implemented and tested:** M0 (repo setup) and M1 (`backend/src/saanssafe/aqi.py`, the CPCB AQI engine, with `backend/tests/test_aqi.py`).
-- **Not implemented yet:** M2+ (Open-Meteo provider, Lambda routing, DynamoDB cache, SAM template/deploy, frontend, hosting). There is no AWS infrastructure and nothing is deployed.
+- **Implemented and tested (M2, part 1):** Open-Meteo data layer (`readings.py`, `providers/`).
+- **Not implemented yet:** the rest of M2 (Lambda routing, DynamoDB cache, SAM template/deploy, frontend, hosting). There is no AWS infrastructure and nothing is deployed.
 - Milestone progress is tracked at the top of `HACKATHON_MASTER_PLAN.md`.
 - The AQI engine's rules were verified against CPCB's report and decided (master plan §12). Change them only with a cited CPCB source.
 
