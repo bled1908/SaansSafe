@@ -18,7 +18,9 @@ Working rules:
 Backend (run from `backend/`; uv manages a Python 3.13 venv, matching the Lambda runtime):
 - All tests: `uv run --python 3.13 pytest -q`
 - One test: `uv run --python 3.13 pytest tests/test_aqi.py::test_category_boundaries -q`
-- SAM CLI is a uv tool at `~/.local/bin/sam` (not on PATH in bash). Validate: `~/.local/bin/sam validate --lint` (from `backend/`; settings in `samconfig.toml`: stack `saanssafe-dev`, ap-south-1). There's no `sam build` step: the code has no third-party dependencies, so `CodeUri: src/` is packaged as-is. Deploy command: TBD (not deployed yet).
+- SAM CLI is a uv tool at `~/.local/bin/sam` (not on PATH in bash). Validate: `~/.local/bin/sam validate --lint` (from `backend/`; settings in `samconfig.toml`: stack `saanssafe-dev`, ap-south-1). There's no `sam build` step: the code has no third-party dependencies, so `CodeUri: src/` is packaged as-is.
+- Deploy (two-step, from `backend/`): `~/.local/bin/sam deploy --no-execute-changeset`, then review the change set and run `aws cloudformation execute-change-set --region ap-south-1 --change-set-name <arn>`, then `aws cloudformation wait stack-update-complete --stack-name saanssafe-dev` (`stack-create-complete` on the first deploy). Stack outputs: `aws cloudformation describe-stacks --stack-name saanssafe-dev --query "Stacks[0].Outputs"`.
+- On Windows Git Bash, prefix AWS commands that take `/aws/lambda/...` log-group names with `MSYS_NO_PATHCONV=1`. Otherwise the path gets rewritten and the AWS CLI rejects it.
 
 ## Backend layout
 
@@ -39,8 +41,8 @@ This is the SaansSafe entry for **Environmental Hacks** (WeMakeDevs × AWS, Bhar
 
 - **Implemented and tested:** M0 (repo setup) and M1 (`backend/src/saanssafe/aqi.py`, the CPCB AQI engine, with `backend/tests/test_aqi.py`).
 - **Implemented and tested (M2):** the Open-Meteo data layer (`readings.py`, `providers/`) plus the `/aqi` API, service and DynamoDB cache (`api.py`, `service.py`, `cache.py`), all against fakes.
-- **M3 (in progress):** `backend/template.yaml` + `samconfig.toml` are written and pass `sam validate --lint`. **Not deployed:** no AWS resources exist yet.
-- **Not implemented yet:** deployment and smoke test (rest of M3), frontend (M4), hosting (M5).
+- **M3 (deployed and verified, 2026-10-08):** stack **`saanssafe-dev`** in ap-south-1. API base URL: `https://paqffn4eq5.execute-api.ap-south-1.amazonaws.com` (`/health`, `/aqi?lat=&lon=`). Smoke tests passed, and DynamoDB cache miss → fetch → hit was verified. AWS charges may apply; demo usage is expected to be low.
+- **Not implemented yet:** frontend (M4), hosting (M5), and the remaining milestones in the master plan.
 - Milestone progress is tracked at the top of `HACKATHON_MASTER_PLAN.md`.
 - The AQI engine's rules were verified against CPCB's report and decided (master plan §12). Change them only with a cited CPCB source.
 
