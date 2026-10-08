@@ -21,7 +21,10 @@ Backend (run from `backend/`; uv manages a Python 3.13 venv, matching the Lambda
 
 ## Backend layout
 
-- `backend/src/saanssafe/aqi.py`: the CPCB Indian AQI engine. Pure functions, no I/O. CO is in mg/m3; everything else is in ug/m3. Pipeline: `rolling_average` (24 h, or 8 h for O3/CO; needs ≥16/24 or ≥6/8 valid hours; `None` = missing) → `sub_index` (breakpoint interpolation, cap 500) → `compute_aqi` (max sub-index; needs ≥3 pollutants incl. PM2.5 or PM10, otherwise `InsufficientDataError`). Data providers (M2) must convert units to these before calling it.
+- `backend/src/saanssafe/aqi.py`: the CPCB Indian AQI engine. Pure functions, no I/O. It follows CPCB CUPS/82/2014-15 (Table 3.11 and §3.5; decisions and page references are in master plan §12). CO is in mg/m3; everything else is in ug/m3. Data providers must convert to these units first.
+  - `rolling_average`: every pollutant needs ≥16 valid hours in the latest 24 (`None` = missing, never filled in). It then averages the latest 24 h, or the **latest** 8 h for O3/CO. "Latest" is our product decision, not a CPCB rule.
+  - `sub_index`: CPCB interpolation with I_LO−1 when I_LO > 50. At or above the open-ended Severe threshold it returns 401, with no interpolation.
+  - `compute_aqi`: the max sub-index. It needs ≥3 pollutants incl. PM2.5 or PM10, otherwise `InsufficientDataError`. When Severe it sets `beyond_scale=True` and `display="401+"`. **Always show `display`, never a made-up number above 401.**
 
 ## Current state
 
@@ -30,7 +33,7 @@ This is the SaansSafe entry for **Environmental Hacks** (WeMakeDevs × AWS, Bhar
 - **Implemented and tested:** M0 (repo setup) and M1 (`backend/src/saanssafe/aqi.py`, the CPCB AQI engine, with `backend/tests/test_aqi.py`).
 - **Not implemented yet:** M2+ (Open-Meteo provider, Lambda routing, DynamoDB cache, SAM template/deploy, frontend, hosting). There is no AWS infrastructure and nothing is deployed.
 - Milestone progress is tracked at the top of `HACKATHON_MASTER_PLAN.md`.
-- **Unverified AQI assumptions** (listed in the master plan, §12) must be checked against authoritative CPCB documents before the data-provider layer (M2) is built. Don't change them without that verification.
+- The AQI engine's rules were verified against CPCB's report and decided (master plan §12). Change them only with a cited CPCB source.
 
 - `claude_read_this/overview.md`: tracks, prizes, the AWS tool menu, judging criteria
 - `claude_read_this/rules.md`: eligibility, what counts as new work, submission requirements

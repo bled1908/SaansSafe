@@ -1,22 +1,28 @@
-"""Indian National Air Quality Index (CPCB, 2014): pure, deterministic functions.
+"""Indian National Air Quality Index (CPCB): pure, deterministic functions.
 
 Nothing in this module touches the network, AWS, or an LLM. Every AQI number
 SaansSafe shows comes from here.
 
+Authority: CPCB, "National Air Quality Index", CUPS/82/2014-15,
+https://cpcb.nic.in/upload/national-air-quality-index/FINAL-REPORT_AQI_.pdf
+(Table 3.11 breakpoints; section 3.5 formula; section 3.7 data sufficiency). Verification
+notes, with page numbers: HACKATHON_MASTER_PLAN.md section 12.
+
 How the index works:
-1. Average each pollutant over its CPCB window (24 h, or 8 h for O3 and CO).
-2. Map each average to a sub-index with CPCB's breakpoint table, interpolating
-   linearly inside a band.
-3. The AQI is the highest sub-index. That pollutant is the "dominant" one.
-   CPCB requires at least 3 pollutants, one of which is PM2.5 or PM10.
+1. Average each pollutant over its CPCB window: 24 h, or 8 h for O3 and CO.
+   CPCB: "a minimum of 16 hours' data is considered necessary for calculating
+   subindex", so every pollutant needs >= 16 valid hours in the latest 24.
+   SaansSafe product decision (CPCB doesn't specify): O3/CO use the latest
+   8-hour window, not the maximum 8-hour average of the day.
+2. Map each average to a sub-index:
+   Ip = (IHI - ILO) / (BHI - BLO) * (Cp - BLO) + ILO,
+   where "ILO" has one subtracted when ILO > 50 (CPCB section 3.5).
+3. CPCB publishes Severe (401-500) as open-ended ("250+") with no upper concentration.
+   We don't invent one: at or above the threshold the sub-index is 401 and the
+   result is flagged as beyond the published scale (shown as "401+").
+4. AQI is the highest sub-index. CPCB requires >= 3 pollutants, including PM2.5 or PM10.
 
 Units: CO in mg/m3; every other pollutant in ug/m3.
-
-UNVERIFIED ASSUMPTIONS (V1-V3, see HACKATHON_MASTER_PLAN.md section 12). These must be
-checked against authoritative CPCB documents before the data-provider layer is built:
-  V1 completeness thresholds (MIN_VALID_HOURS)
-  V2 latest vs. maximum 8 h average for O3/CO (rolling_average)
-  V3 upper bound of the open-ended Severe band (_build_bands)
 """
 
 from __future__ import annotations
@@ -27,10 +33,15 @@ from dataclasses import dataclass
 from enum import Enum
 from types import MappingProxyType
 
-AQI_MAX = 500
+AQI_SCALE_MAX = 500
+SEVERE_SUB_INDEX = 401
 MIN_POLLUTANTS = 3
-# CPCB data-completeness practice: about 2/3 of the hours in the window must be valid.
-MIN_VALID_HOURS = MappingProxyType({24: 16, 8: 6})
+COMPLETENESS_WINDOW_HOURS = 24
+MIN_VALID_HOURS = 16  # CPCB section 3.7, applied to every pollutant
+BEYOND_SCALE_NOTE = (
+    "At or above CPCB's published Severe threshold. CPCB publishes no upper "
+    "concentration for Severe, so no exact AQI above 401 is given."
+)
 
 
 class Pollutant(str, Enum):
@@ -88,18 +99,23 @@ class Category(Enum):
 
 @dataclass(frozen=True)
 class Band:
-    """One breakpoint row: concentration range [c_lo, c_hi] maps to index [i_lo, i_hi]."""
+    """One published breakpoint row: concentration [c_lo, c_hi] maps to index [i_lo, i_hi]."""
 
     c_lo: float
     c_hi: float
     i_lo: int
     i_hi: int
 
+    @property
+    def interpolation_i_lo(self) -> int:
+        """CPCB section 3.5: 'subtract one from ILO, if ILO is greater than 50'."""
+        return self.i_lo - 1 if self.i_lo > 50 else self.i_lo
 
-_INDEX_RANGES = tuple((c.low, c.high) for c in Category)
 
-# CPCB published concentration breakpoints, one (low, high) pair per category from
-# Good to Very Poor, followed by the open-ended Severe lower bound ("X+").
+_INDEX_RANGES = tuple((c.low, c.high) for c in Category if c is not Category.SEVERE)
+
+# CPCB Table 3.11: (low, high) concentration per category from Good to Very Poor,
+# then the open-ended Severe threshold ("X+").
 _PUBLISHED: Mapping[Pollutant, tuple[tuple[tuple[float, float], ...], float]] = {
     Pollutant.PM10: (((0, 50), (51, 100), (101, 250), (251, 350), (351, 430)), 430),
     Pollutant.PM25: (((0, 30), (31, 60), (61, 90), (91, 120), (121, 250)), 250),
@@ -107,27 +123,21 @@ _PUBLISHED: Mapping[Pollutant, tuple[tuple[tuple[float, float], ...], float]] = 
     Pollutant.O3: (((0, 50), (51, 100), (101, 168), (169, 208), (209, 748)), 748),
     Pollutant.CO: (((0, 1.0), (1.1, 2.0), (2.1, 10), (10.1, 17), (17.1, 34)), 34),
     Pollutant.SO2: (((0, 40), (41, 80), (81, 380), (381, 800), (801, 1600)), 1600),
-    Pollutant.NH3: (((0, 200), (201, 400), (401, 800), (801, 1200), (1200, 1800)), 1800),
+    Pollutant.NH3: (((0, 200), (201, 400), (401, 800), (801, 1200), (1201, 1800)), 1800),
 }
 
-
-def _build_bands(
-    published: tuple[tuple[float, float], ...], severe_lo: float
-) -> tuple[Band, ...]:
-    bands = [
-        Band(c_lo, c_hi, i_lo, i_hi)
-        for (c_lo, c_hi), (i_lo, i_hi) in zip(published, _INDEX_RANGES, strict=False)
-    ]
-    # CPCB leaves Severe open-ended. Give it the same concentration width as the
-    # Very Poor band, so the index reaches 500 at a finite concentration.
-    very_poor = published[-1]
-    severe_hi = severe_lo + (very_poor[1] - very_poor[0])
-    bands.append(Band(severe_lo, severe_hi, *_INDEX_RANGES[-1]))
-    return tuple(bands)
-
-
 BREAKPOINTS: Mapping[Pollutant, tuple[Band, ...]] = MappingProxyType(
-    {p: _build_bands(rows, severe_lo) for p, (rows, severe_lo) in _PUBLISHED.items()}
+    {
+        p: tuple(
+            Band(c_lo, c_hi, i_lo, i_hi)
+            for (c_lo, c_hi), (i_lo, i_hi) in zip(rows, _INDEX_RANGES, strict=True)
+        )
+        for p, (rows, _) in _PUBLISHED.items()
+    }
+)
+
+SEVERE_THRESHOLD: Mapping[Pollutant, float] = MappingProxyType(
+    {p: float(threshold) for p, (_, threshold) in _PUBLISHED.items()}
 )
 
 
@@ -142,6 +152,12 @@ class AqiResult:
     dominant: Pollutant
     sub_indices: Mapping[Pollutant, float]
     concentrations: Mapping[Pollutant, float]
+    beyond_scale: bool  # dominant pollutant is at or above its open-ended Severe threshold
+
+    @property
+    def display(self) -> str:
+        """Public representation: '401+' when beyond the published scale."""
+        return f"{self.aqi}+" if self.beyond_scale else str(self.aqi)
 
 
 def _validate_concentration(value: object, name: str) -> float:
@@ -166,22 +182,32 @@ def round_half_up(value: float) -> int:
     return math.floor(value + 0.5)
 
 
-def sub_index(pollutant: Pollutant | str, concentration: float) -> float:
-    """CPCB sub-index for one pollutant's averaged concentration, capped at 500.
+def is_beyond_scale(pollutant: Pollutant | str, concentration: float) -> bool:
+    """True when the concentration is at or above CPCB's open-ended Severe threshold."""
+    pollutant = _to_pollutant(pollutant)
+    c = _validate_concentration(concentration, pollutant.value)
+    return c >= SEVERE_THRESHOLD[pollutant]
 
-    Values in the small gaps between published bands (e.g. PM2.5 30.5, between
-    0-30 and 31-60) take the lower index of the band above. At the published
-    breakpoints this matches CPCB's formula exactly.
+
+def sub_index(pollutant: Pollutant | str, concentration: float) -> float:
+    """CPCB sub-index for one pollutant's averaged concentration.
+
+    Returns 401 for any concentration at or above the Severe threshold (see
+    is_beyond_scale). Values in the gaps between published bands (e.g. PM2.5 30.5,
+    between 0-30 and 31-60) take the interpolation start of the band above.
     """
     pollutant = _to_pollutant(pollutant)
     c = _validate_concentration(concentration, pollutant.value)
+    if c >= SEVERE_THRESHOLD[pollutant]:
+        return float(SEVERE_SUB_INDEX)
     for band in BREAKPOINTS[pollutant]:
         if c <= band.c_hi:
+            i_lo = band.interpolation_i_lo
             if c < band.c_lo:
-                return float(band.i_lo)
-            span = band.c_hi - band.c_lo
-            return band.i_lo + (band.i_hi - band.i_lo) * (c - band.c_lo) / span
-    return float(AQI_MAX)
+                return float(i_lo)
+            return i_lo + (band.i_hi - i_lo) * (c - band.c_lo) / (band.c_hi - band.c_lo)
+    # Unreachable: every table's last c_hi equals its Severe threshold.
+    raise AssertionError(f"No breakpoint band for {pollutant.value}={c}")
 
 
 def category_for(aqi: int) -> Category:
@@ -191,24 +217,30 @@ def category_for(aqi: int) -> Category:
     for category in Category:
         if category.low <= aqi <= category.high:
             return category
-    raise ValueError(f"AQI must be within 0..{AQI_MAX}, got {aqi}")
+    raise ValueError(f"AQI must be within 0..{AQI_SCALE_MAX}, got {aqi}")
 
 
-def rolling_average(hourly: Sequence[float | None], window_hours: int) -> float | None:
-    """Mean of the most recent `window_hours` values (oldest first, latest last).
+def rolling_average(hourly: Sequence[float | None], averaging_hours: int) -> float | None:
+    """Average over the latest `averaging_hours` (24 or 8) of an hourly series.
 
-    `None` marks a missing hour. Returns None when fewer valid hours remain than
-    CPCB completeness requires. Missing hours are never filled in.
+    `hourly` is oldest first, latest last. `None` marks a missing hour.
+    Returns None (never a filled-in value) when:
+      - fewer than 16 of the latest 24 hours are valid (CPCB section 3.7), or
+      - the latest averaging window holds no valid hour.
     """
-    if window_hours not in MIN_VALID_HOURS:
-        raise ValueError(f"Unsupported averaging window: {window_hours} h")
-    window = list(hourly)[-window_hours:]
-    valid = [
-        _validate_concentration(v, f"hour {i}") for i, v in enumerate(window) if v is not None
+    if averaging_hours not in (8, 24):
+        raise ValueError(f"Unsupported averaging window: {averaging_hours} h")
+    recent = list(hourly)[-COMPLETENESS_WINDOW_HOURS:]
+    checked = [
+        None if v is None else _validate_concentration(v, f"hour {i}")
+        for i, v in enumerate(recent)
     ]
-    if len(valid) < MIN_VALID_HOURS[window_hours]:
+    if sum(v is not None for v in checked) < MIN_VALID_HOURS:
         return None
-    return sum(valid) / len(valid)
+    window = [v for v in checked[-averaging_hours:] if v is not None]
+    if not window:
+        return None
+    return sum(window) / len(window)
 
 
 def averaged_concentrations(
@@ -241,13 +273,14 @@ def compute_aqi(concentrations: Mapping[Pollutant | str, float]) -> AqiResult:
     # Highest sub-index wins. Ties go to the earlier pollutant in Pollutant order.
     order = list(Pollutant)
     dominant = max(indices, key=lambda p: (indices[p], -order.index(p)))
-    aqi = min(round_half_up(indices[dominant]), AQI_MAX)
+    aqi = round_half_up(indices[dominant])
     return AqiResult(
         aqi=aqi,
         category=category_for(aqi),
         dominant=dominant,
         sub_indices=MappingProxyType(indices),
         concentrations=MappingProxyType(clean),
+        beyond_scale=is_beyond_scale(dominant, clean[dominant]),
     )
 
 

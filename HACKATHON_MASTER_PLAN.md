@@ -1,7 +1,7 @@
 # Hackathon Master Plan: Environmental Hacks (Bharat Builds Tour, Event 02)
 
 > Status: **Concept locked: SaansSafe (Air track). AWS account 703321058941 confirmed.**
-> Day-1 milestones: [x] M0 repo setup · [x] M1 AQI + tests (111 passing) · [ ] M2 provider/API/cache · [ ] M3 SAM deploy + smoke test · [ ] M4 frontend · [ ] M5 S3+CloudFront live URL
+> Day-1 milestones: [x] M0 repo setup · [x] M1 AQI + tests (CPCB-verified, 124 passing) · [ ] M2 provider/API/cache · [ ] M3 SAM deploy + smoke test · [ ] M4 frontend · [ ] M5 S3+CloudFront live URL
 > Written 2026-10-08 (Day 1). Sources: `claude_read_this/{overview,rules,schedule,mentors,community_partners}.md` and `claude_read_this/previous_winners/*.html` (First Commit, event 01).
 > Future sessions: read this file and `SUBMISSION_CHECKLIST.md` instead of re-reading `claude_read_this/`.
 
@@ -195,7 +195,16 @@ Design principles:
 - **Q7. DTU Oct 10.** Is anyone attending in person? If so, plan a mentor-feedback checkpoint.
 - **Q8. GitHub account/org** for the public repo, and is the `gh` CLI authenticated?
 
-## 12. AQI assumptions pending CPCB verification (blocker for M2)
+## 12. AQI assumptions: CPCB verification and final decisions (resolved 2026-10-08)
+
+> **Final decisions (implemented in `aqi.py`, 124 tests passing):**
+> - **V1:** every pollutant, O3/CO included, needs ≥16 valid hours in the latest 24 (CPCB §3.7, p.46 [44]). The unsupported 6/8 rule is removed.
+> - **V2:** O3/CO use the **latest 8-hour window**. This is a **SaansSafe product decision, not a CPCB requirement**. CPCB confirms the 8-hour period and describes running 8-hour averages (Table 3.11; §3.5, p.40–41 [38–39]) but doesn't prescribe latest vs. maximum. We chose "latest" because the product answers "what is the air like now / in the next hours".
+> - **V3:** no interpolation above the published Severe threshold. At or above it the sub-index is **401**, the category is Severe, `beyond_scale=True`, and the AQI is shown as **"401+"** with an explanatory note (Table 3.11 Severe row, p.37 [35]).
+> - **V4:** the CPCB rule "subtract one from I_LO if I_LO > 50" is implemented (§3.5, p.39 [37]), so PM2.5 = 31 gives AQI 50.
+> - **V5:** NH3 Very Poor is 1201–1800 (Table 3.11).
+>
+> The original assumptions and evidence are kept below for traceability.
 
 These are implemented in `backend/src/saanssafe/aqi.py` and covered by tests, but **not yet verified against an authoritative CPCB source** (the National AQI technical document and calculator). Verify each one before building the data-provider layer. Change the code only with a cited source.
 
@@ -204,3 +213,15 @@ These are implemented in `backend/src/saanssafe/aqi.py` and covered by tests, bu
 | V1 | 24 h averages need ≥16/24 valid hours, 8 h averages ≥6/8 | A different completeness threshold, or none | `MIN_VALID_HOURS` |
 | V2 | O3 and CO use the **latest** 8 h rolling average | The **maximum** 8 h average within the past 24 h | `rolling_average` / `AVERAGING_HOURS` |
 | V3 | Open-ended Severe band ("X+") extended by the Very Poor band's width (PM2.5 → 379, PM10 → 509), AQI capped at 500 | Officially published Severe upper breakpoints (e.g. PM2.5 380, PM10 510?) | `_build_bands` |
+
+### Verification results (2026-10-08). Code NOT changed yet. Awaiting decision.
+
+**Source:** CPCB, *National Air Quality Index*, Control of Urban Pollution Series CUPS/82/2014-15 (the final report; its foreword says the draft was launched in Oct 2014 for public comment). URL: https://cpcb.nic.in/upload/national-air-quality-index/FINAL-REPORT_AQI_.pdf (58 pp; sha256 prefix d2b0fd754a8f9fb3). Page numbers below are PDF pages, with the printed page number in brackets.
+
+| ID | Official finding | Status |
+|---|---|---|
+| V1 | §3.7, p.46 [44]: "a minimum of 16 hours' data is considered necessary for calculating subindex." The rule is stated once, for every sub-index. **There is no separate threshold for 8-hour O3/CO.** | 16/24 **confirmed**. 6/8 **unsupported, must change** |
+| V2 | Table 3.11, p.37 [35]: O3 and CO use an "8-hr" averaging time. §3.5 worked example, p.40–41 [38–39]: "The AQI for CO and O3 has been calculated for running 8-hr averages. This will give 23 AQI values; here maximum and min AQI of CO and O3 are presented." This is an illustration, not a rule. | **Unresolved.** The source doesn't say whether to use the latest or the maximum 8-hour average |
+| V3 | Table 3.11, p.37 [35], Severe (401–500) row: PM10 "430 +", PM2.5 "250+", NO2 "400+", O3 "748+*", CO "34+", SO2 "1600+", NH3 "1800+". **No upper concentration is published.** The formula (§3.5, p.39 [37]) needs B_HI, so the official method can't interpolate within Severe. The report says the Excel calculator "can be obtained from CPCB"; it isn't public, and we didn't obtain it. | Our 379/509 extension is **not official, must redesign** |
+| V4 (new) | §3.5, p.39 [37], formula definitions: "I_LO = AQI value corresponding to B_LO; **subtract one from I_LO, if I_LO is greater than 50**". So for Satisfactory and above, interpolation starts at 50/100/200/300/400, not at 51/101/201/301/401. Example: PM2.5 = 31 gives 50, not 51. | Our implementation **differs, must change** |
+| V5 (new) | Table 3.11: NH3 Very Poor is "1201-1800" (we use 1200). The O3 "209-748*" footnote reads "*One hourly monitoring (for mathematical calculation only)". | Minor fix (NH3 isn't used for India via Open-Meteo) |
