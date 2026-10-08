@@ -13,9 +13,24 @@ Working rules:
 - Environment: Windows. AWS CLI is authenticated, region `ap-south-1`. SAM CLI and Docker are **not installed**. Free-tier/pay-per-request services only. No NAT/EC2.
 - The user has a limited Claude usage budget. Avoid broad re-scans, and keep the plan files updated so context isn't rediscovered.
 
+## Commands
+
+Backend (run from `backend/`; uv manages a Python 3.13 venv, matching the Lambda runtime):
+- All tests: `uv run --python 3.13 pytest -q`
+- One test: `uv run --python 3.13 pytest tests/test_aqi.py::test_category_boundaries -q`
+
+## Backend layout
+
+- `backend/src/saanssafe/aqi.py`: the CPCB Indian AQI engine. Pure functions, no I/O. CO is in mg/m3; everything else is in ug/m3. Pipeline: `rolling_average` (24 h, or 8 h for O3/CO; needs ≥16/24 or ≥6/8 valid hours; `None` = missing) → `sub_index` (breakpoint interpolation, cap 500) → `compute_aqi` (max sub-index; needs ≥3 pollutants incl. PM2.5 or PM10, otherwise `InsufficientDataError`). Data providers (M2) must convert units to these before calling it.
+
 ## Current state
 
-There is no project code yet. This folder is the workspace for an entry to **Environmental Hacks** (WeMakeDevs × AWS, Bharat Builds Tour event 02, Oct 8–11, 2026). `claude_read_this/` holds the event's web pages, saved as text. It is the source of truth for the rules. Update this file with build, test and run commands, and with the architecture, once a stack is chosen and code exists.
+This is the SaansSafe entry for **Environmental Hacks** (WeMakeDevs × AWS, Bharat Builds Tour event 02, Oct 8–11, 2026). `claude_read_this/` holds the event's web pages, saved as text. It is the source of truth for the rules.
+
+- **Implemented and tested:** M0 (repo setup) and M1 (`backend/src/saanssafe/aqi.py`, the CPCB AQI engine, with `backend/tests/test_aqi.py`).
+- **Not implemented yet:** M2+ (Open-Meteo provider, Lambda routing, DynamoDB cache, SAM template/deploy, frontend, hosting). There is no AWS infrastructure and nothing is deployed.
+- Milestone progress is tracked at the top of `HACKATHON_MASTER_PLAN.md`.
+- **Unverified AQI assumptions** (listed in the master plan, §12) must be checked against authoritative CPCB documents before the data-provider layer (M2) is built. Don't change them without that verification.
 
 - `claude_read_this/overview.md`: tracks, prizes, the AWS tool menu, judging criteria
 - `claude_read_this/rules.md`: eligibility, what counts as new work, submission requirements

@@ -1,7 +1,7 @@
 # Hackathon Master Plan: Environmental Hacks (Bharat Builds Tour, Event 02)
 
 > Status: **Concept locked: SaansSafe (Air track). AWS account 703321058941 confirmed.**
-> Day-1 milestones: [x] M0 repo setup · [ ] M1 AQI + tests · [ ] M2 provider/API/cache · [ ] M3 SAM deploy + smoke test · [ ] M4 frontend · [ ] M5 S3+CloudFront live URL
+> Day-1 milestones: [x] M0 repo setup · [x] M1 AQI + tests (111 passing) · [ ] M2 provider/API/cache · [ ] M3 SAM deploy + smoke test · [ ] M4 frontend · [ ] M5 S3+CloudFront live URL
 > Written 2026-10-08 (Day 1). Sources: `claude_read_this/{overview,rules,schedule,mentors,community_partners}.md` and `claude_read_this/previous_winners/*.html` (First Commit, event 01).
 > Future sessions: read this file and `SUBMISSION_CHECKLIST.md` instead of re-reading `claude_read_this/`.
 
@@ -194,3 +194,13 @@ Design principles:
 - **Q6. Bedrock model choice and budget comfort.** OK to spend a few dollars of the $200 credits on Bedrock (Claude Haiku-class)?
 - **Q7. DTU Oct 10.** Is anyone attending in person? If so, plan a mentor-feedback checkpoint.
 - **Q8. GitHub account/org** for the public repo, and is the `gh` CLI authenticated?
+
+## 12. AQI assumptions pending CPCB verification (blocker for M2)
+
+These are implemented in `backend/src/saanssafe/aqi.py` and covered by tests, but **not yet verified against an authoritative CPCB source** (the National AQI technical document and calculator). Verify each one before building the data-provider layer. Change the code only with a cited source.
+
+| ID | Assumption as implemented | Alternative to check | Where in code |
+|---|---|---|---|
+| V1 | 24 h averages need ≥16/24 valid hours, 8 h averages ≥6/8 | A different completeness threshold, or none | `MIN_VALID_HOURS` |
+| V2 | O3 and CO use the **latest** 8 h rolling average | The **maximum** 8 h average within the past 24 h | `rolling_average` / `AVERAGING_HOURS` |
+| V3 | Open-ended Severe band ("X+") extended by the Very Poor band's width (PM2.5 → 379, PM10 → 509), AQI capped at 500 | Officially published Severe upper breakpoints (e.g. PM2.5 380, PM10 510?) | `_build_bands` |
