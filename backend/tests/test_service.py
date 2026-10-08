@@ -168,3 +168,56 @@ def test_severe_result_is_beyond_scale():
 def test_invalid_policy_rejected(kwargs):
     with pytest.raises(ValueError):
         service(**kwargs)
+
+
+# --- 72-hour forecast -------------------------------------------------------------------------
+
+def test_forecast_uses_fresh_cache_that_covers_72_hours():
+    provider = FakeProvider()
+    cache = FakeCache({KEY: cached(timedelta(minutes=10), make_series(hours=130))})
+    report = service(provider, cache).forecast(LAT, LON)
+    assert provider.calls == []
+    assert report.cache is CacheOutcome.HIT
+    assert len(report.outlook.hours) == 73 and report.outlook.complete
+
+
+def test_forecast_refetches_when_fresh_cache_falls_short_of_72_hours():
+    provider = FakeProvider(series=make_series(hours=130))
+    cache = FakeCache({KEY: cached(timedelta(minutes=10), make_series(hours=96))})  # ends T0+95h
+    report = service(provider, cache).forecast(LAT, LON)
+    assert len(provider.calls) == 1
+    assert report.cache is CacheOutcome.REFRESHED
+    assert report.outlook.complete
+
+
+def test_forecast_reports_partial_coverage_from_provider_honestly():
+    report = service(FakeProvider(series=make_series(hours=96))).forecast(LAT, LON)
+    assert report.cache is CacheOutcome.MISS
+    assert report.outlook.complete is False
+    assert len(report.outlook.hours) == 66  # T0+30h .. T0+95h
+
+
+def test_forecast_stale_fallback_on_transient_failure_is_marked_and_may_be_partial():
+    cache = FakeCache({KEY: cached(timedelta(hours=2), make_series(hours=96))})
+    report = service(FakeProvider(error=ProviderUnavailableError("down")), cache).forecast(LAT, LON)
+    assert (report.freshness, report.cache) == (Freshness.STALE, CacheOutcome.STALE_FALLBACK)
+    assert "120 minutes ago" in report.warning
+    assert report.outlook.complete is False
+
+
+@pytest.mark.parametrize("error", [ProviderRequestError("HTTP 400"), ProviderResponseError("bad")])
+def test_forecast_never_uses_stale_cache_for_non_transient_failures(error):
+    cache = FakeCache({KEY: cached(timedelta(hours=2), make_series(hours=130))})
+    with pytest.raises(type(error)):
+        service(FakeProvider(error=error), cache).forecast(LAT, LON)
+
+
+def test_forecast_insufficient_current_hour_raises():
+    sparse = make_series(hours=130, pm10=None, no2=None, so2=None, o3=None, co=None)
+    with pytest.raises(InsufficientDataError):
+        service(FakeProvider(series=sparse)).forecast(LAT, LON)
+
+
+def test_forecast_and_current_aqi_agree_on_the_current_hour():
+    svc = service(FakeProvider(series=make_series(hours=130)))
+    assert svc.forecast(LAT, LON).outlook.hours[0].result == svc.current_aqi(LAT, LON).result

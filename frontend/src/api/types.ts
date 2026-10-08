@@ -73,6 +73,50 @@ export interface Decision {
   data_freshness: { status: "fresh" | "stale"; age_minutes: number; warning: string | null };
 }
 
+/** One hour of GET /forecast. Null fields mean the backend had too little data for that hour. */
+export interface ForecastHour {
+  valid_for_hour: string;
+  aqi: { value: number; display: string; beyond_scale: boolean; category: CategoryLabel } | null;
+  dominant_pollutant: { code: PollutantCode; name: string; sub_index: number; beyond_scale: boolean } | null;
+  decision: { action: SchoolAction; severity: Severity; headline: string; restricted: boolean } | null;
+}
+
+/** A school-facing period (IST morning / afternoon / night) computed by the backend. */
+export interface ForecastPeriod {
+  label: string;
+  part: "morning" | "afternoon" | "night";
+  date: string;
+  start: string;
+  end: string;
+  hours: number;
+  school_hours: boolean;
+  school_day: boolean; // v1: Monday–Friday (IST date), decided by the backend
+  partial: boolean;
+  worst: ForecastHour | null;
+}
+
+export interface ForecastResponse {
+  data_type: "forecast_model";
+  method: string;
+  disclaimer: string;
+  timezone: string;
+  location: { requested: Coordinates; query: Coordinates; model_grid: Coordinates };
+  coverage: { start: string; end: string; hours: number; requested_hours: number; complete: boolean };
+  hours: ForecastHour[];
+  periods: ForecastPeriod[];
+  summary: {
+    now: ForecastHour | null;
+    worst: ForecastHour | null;
+    next_change: ForecastHour | null;
+    first_restricted: ForecastHour | null;
+    best_school_period: ForecastPeriod | null;
+    best_school_period_rule: string;
+  };
+  policy: { name: string; version: string; basis: string };
+  freshness: Freshness;
+  source: { provider: string; attribution: string };
+}
+
 export interface AqiResponse {
   data_type: "forecast_model";
   method: string;

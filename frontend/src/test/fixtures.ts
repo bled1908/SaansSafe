@@ -1,4 +1,12 @@
-import type { AqiResponse } from "../api/types";
+import type {
+  AqiResponse,
+  CategoryLabel,
+  ForecastHour,
+  ForecastPeriod,
+  ForecastResponse,
+  SchoolAction,
+  Severity,
+} from "../api/types";
 
 /**
  * TEST-ONLY fixture with the exact shape of the deployed /aqi response
@@ -108,5 +116,81 @@ export function makeStaleResponse(): AqiResponse {
     ...base,
     freshness: { ...base.freshness, status: "stale", cache: "stale_fallback", age_minutes: 95, warning },
     decision: { ...base.decision, data_freshness: { status: "stale", age_minutes: 95, warning } },
+  };
+}
+
+type Tier = [display: string, value: number, category: CategoryLabel, severity: Severity, action: SchoolAction, headline: string];
+
+const MODERATE: Tier = ["150", 150, "Moderate", "moderate", "reduce_outdoor_exertion", "Reduce strenuous outdoor activity"];
+const POOR: Tier = ["248", 248, "Poor", "high", "move_strenuous_activities_indoors", "Move assembly, PE and sports indoors"];
+const SEVERE: Tier = ["401+", 401, "Severe", "critical", "suspend_outdoor_activities", "Suspend all outdoor activities"];
+
+function forecastHour(iso: string, [display, value, category, severity, action, headline]: Tier): ForecastHour {
+  return {
+    valid_for_hour: iso,
+    aqi: { value, display, beyond_scale: display === "401+", category },
+    dominant_pollutant: { code: "pm2_5", name: "PM2.5 (fine particulate matter)", sub_index: value, beyond_scale: display === "401+" },
+    decision: { action, severity, headline, restricted: true },
+  };
+}
+
+/**
+ * TEST-ONLY fixture shaped like GET /forecast: 73 hours that move Moderate -> Poor -> Severe.
+ * Summary fields are set the way the backend computes them for this sequence.
+ */
+export function makeForecastResponse(overrides: Partial<ForecastResponse> = {}): ForecastResponse {
+  const start = Date.parse("2026-10-08T06:00:00Z");
+  const iso = (i: number) => new Date(start + i * 3_600_000).toISOString().replace(".000Z", "Z");
+  const hours = Array.from({ length: 73 }, (_, i) => forecastHour(iso(i), i < 30 ? MODERATE : i < 50 ? POOR : SEVERE));
+  const period = (label: string, part: ForecastPeriod["part"], from: number, to: number, partial = false): ForecastPeriod => ({
+    label,
+    part,
+    date: "2026-10-08",
+    start: iso(from),
+    end: iso(to),
+    hours: to - from,
+    school_hours: part !== "night",
+    school_day: !label.startsWith("Saturday") && !label.startsWith("Sunday"),
+    partial,
+    worst: hours[Math.min(to - 1, 72)] ?? null,
+  });
+  const periods = [
+    period("This afternoon", "afternoon", 1, 7),
+    period("Tonight", "night", 7, 19),
+    period("Tomorrow morning", "morning", 19, 25),
+    period("Saturday morning", "morning", 67, 73, true),
+  ];
+  return {
+    data_type: "forecast_model",
+    method: "Indian National AQI method (CPCB breakpoints) applied to CAMS model forecast data",
+    disclaimer: "Forecast/model estimate for a model grid cell. Not a reading from a CPCB monitoring station.",
+    timezone: "Asia/Kolkata",
+    location: {
+      requested: { lat: 28.6129, lon: 77.2295 },
+      query: { lat: 28.61, lon: 77.23 },
+      model_grid: { lat: 28.599998, lon: 77.20001 },
+    },
+    coverage: { start: iso(0), end: iso(72), hours: 73, requested_hours: 73, complete: true },
+    hours,
+    periods,
+    summary: {
+      now: hours[0]!,
+      worst: hours[50]!,
+      next_change: hours[30]!,
+      first_restricted: hours[0]!,
+      best_school_period: periods[0]!,
+      best_school_period_rule: "SaansSafe v1 treats Monday–Friday as school days for best-school-window selection.",
+    },
+    policy: {
+      name: "SaansSafe school safety policy",
+      version: "saanssafe-school-v1",
+      basis: "SaansSafe school safety policy (a product policy, not a CPCB rule), applied to the CPCB category of a forecast/model AQI. Not medical advice.",
+    },
+    freshness: { status: "fresh", cache: "hit", fetched_at: "2026-10-08T06:20:00Z", age_minutes: 12, warning: null },
+    source: {
+      provider: "open-meteo",
+      attribution: "Air quality data: Open-Meteo.com, based on CAMS (Copernicus Atmosphere Monitoring Service)",
+    },
+    ...overrides,
   };
 }

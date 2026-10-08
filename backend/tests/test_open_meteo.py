@@ -79,7 +79,8 @@ def test_request_url_and_timeout():
     assert query["latitude"] == "28.6139" and query["longitude"] == "77.2090"
     assert query["hourly"].split(",") == list(VARIABLES)
     assert query["timeformat"] == "unixtime" and query["timezone"] == "GMT"
-    assert query["past_days"] == "1" and query["forecast_days"] == "3"
+    # 4 forecast days (GMT) always reach >= 72 h past the current UTC hour; see FORECAST_DAYS.
+    assert query["past_days"] == "1" and query["forecast_days"] == "4"
 
 
 @pytest.mark.parametrize(

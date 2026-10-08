@@ -1,4 +1,4 @@
-import type { AqiResponse, Coordinates } from "./types";
+import type { AqiResponse, Coordinates, ForecastResponse } from "./types";
 
 export const DEFAULT_API_BASE_URL = "https://paqffn4eq5.execute-api.ap-south-1.amazonaws.com";
 export const DEFAULT_TIMEOUT_MS = 15_000;
@@ -132,11 +132,38 @@ export function isAqiResponse(body: unknown): body is AqiResponse {
   );
 }
 
-export async function fetchAqi(
+/** Minimal runtime check for the GET /forecast fields the outlook UI depends on. */
+export function isForecastResponse(body: unknown): body is ForecastResponse {
+  if (!isRecord(body) || body.data_type !== "forecast_model") return false;
+  const { coverage, summary, freshness, source } = body;
+  return (
+    Array.isArray(body.hours) &&
+    body.hours.length > 0 &&
+    Array.isArray(body.periods) &&
+    isRecord(coverage) &&
+    typeof coverage.complete === "boolean" &&
+    isRecord(summary) &&
+    isRecord(freshness) &&
+    isRecord(source)
+  );
+}
+
+export function fetchAqi(coords: Coordinates, options: FetchAqiOptions = {}): Promise<AqiResponse> {
+  return requestJson("/aqi", coords, isAqiResponse, options);
+}
+
+export function fetchForecast(coords: Coordinates, options: FetchAqiOptions = {}): Promise<ForecastResponse> {
+  return requestJson("/forecast", coords, isForecastResponse, options);
+}
+
+/** Shared GET with timeout, abort, error-shape mapping and a runtime contract check. */
+async function requestJson<T>(
+  path: string,
   { lat, lon }: Coordinates,
-  { signal, timeoutMs = DEFAULT_TIMEOUT_MS, baseUrl = apiBaseUrl(), fetchImpl = fetch }: FetchAqiOptions = {},
-): Promise<AqiResponse> {
-  const url = `${baseUrl}/aqi?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+  validate: (body: unknown) => body is T,
+  { signal, timeoutMs = DEFAULT_TIMEOUT_MS, baseUrl = apiBaseUrl(), fetchImpl = fetch }: FetchAqiOptions,
+): Promise<T> {
+  const url = `${baseUrl}${path}?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -172,7 +199,7 @@ export async function fetchAqi(
   if (!response.ok) {
     throw errorFromResponse(response.status, body, parseRetryAfter(response.headers.get("Retry-After")));
   }
-  if (!isAqiResponse(body)) {
+  if (!validate(body)) {
     throw new ApiError("invalid_response", "The service returned an unexpected response.", response.status);
   }
   return body;

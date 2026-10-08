@@ -30,7 +30,9 @@ from saanssafe.readings import HourlyReading, ReadingSeries
 DEFAULT_BASE_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 DEFAULT_TIMEOUT_S = 10.0
 PAST_DAYS = 1  # guarantees >= 24 h of history before the current hour
-FORECAST_DAYS = 3
+# With timezone=GMT the data ends at 23:00 UTC on the last forecast day, so from UTC hour H
+# it reaches 24*FORECAST_DAYS - 1 - H hours ahead: 4 days guarantees >= 72 hours for any H.
+FORECAST_DAYS = 4
 MAX_RESPONSE_BYTES = 2_000_000
 UG_PER_MG = 1000.0
 _UG_PER_M3_UNITS = frozenset({"μg/m³", "µg/m³"})  # Greek mu and micro sign

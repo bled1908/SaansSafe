@@ -4,15 +4,25 @@ import type { AqiResponse, Coordinates } from "../api/types";
 
 export const SLOW_AFTER_MS = 1_500;
 
-export type AqiState =
+export type ResourceState<T> =
   | { status: "idle" }
   | { status: "loading"; slow: boolean }
-  | { status: "success"; data: AqiResponse }
+  | { status: "success"; data: T }
   | { status: "error"; error: ApiError };
 
-/** Fetches /aqi for the selected coordinates. Does nothing until coordinates exist. */
-export function useAqi(coords: Coordinates | null): { state: AqiState; retry: () => void } {
-  const [state, setState] = useState<AqiState>({ status: "idle" });
+export type AqiState = ResourceState<AqiResponse>;
+
+type Fetcher<T> = (coords: Coordinates, options: { signal: AbortSignal }) => Promise<T>;
+
+/**
+ * Fetches a coordinate-based resource. Does nothing until coordinates exist, aborts
+ * superseded requests, flags slow loads, and supports retry. `fetcher` must be stable.
+ */
+export function useCoordsResource<T>(
+  coords: Coordinates | null,
+  fetcher: Fetcher<T>,
+): { state: ResourceState<T>; retry: () => void } {
+  const [state, setState] = useState<ResourceState<T>>({ status: "idle" });
   const [attempt, setAttempt] = useState(0);
   const lat = coords?.lat;
   const lon = coords?.lon;
@@ -29,7 +39,7 @@ export function useAqi(coords: Coordinates | null): { state: AqiState; retry: ()
       SLOW_AFTER_MS,
     );
 
-    fetchAqi({ lat, lon }, { signal: controller.signal })
+    fetcher({ lat, lon }, { signal: controller.signal })
       .then((data) => setState({ status: "success", data }))
       .catch((err: unknown) => {
         if (controller.signal.aborted) return; // superseded by a newer request
@@ -43,8 +53,13 @@ export function useAqi(coords: Coordinates | null): { state: AqiState; retry: ()
       clearTimeout(slowTimer);
       controller.abort();
     };
-  }, [lat, lon, attempt]);
+  }, [lat, lon, attempt, fetcher]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
   return { state, retry };
+}
+
+/** Fetches /aqi for the selected coordinates. */
+export function useAqi(coords: Coordinates | null): { state: AqiState; retry: () => void } {
+  return useCoordsResource(coords, fetchAqi);
 }

@@ -5,12 +5,14 @@ import { AppShell, type LiveInfo } from "./components/AppShell";
 import { DecisionHero } from "./components/DecisionHero";
 import { PollutantSection } from "./components/PollutantSection";
 import { ProvenanceStrip } from "./components/ProvenanceStrip";
+import { OutlookSection } from "./components/OutlookSection";
 import { LocationChip, LocationOptions } from "./components/SchoolPicker";
 import { Sky } from "./components/Sky";
 import { SourceFooter } from "./components/SourceFooter";
 import { EmptyState, ErrorState, LoadingState } from "./components/StateViews";
 import { WhyDecision } from "./components/WhyDecision";
 import { useAqi } from "./hooks/useAqi";
+import { useForecast } from "./hooks/useForecast";
 import { formatIstTime } from "./lib/format";
 import type { SchoolLocation } from "./lib/locations";
 
@@ -19,6 +21,7 @@ const REGION = apiRegion();
 export default function App() {
   const [location, setLocation] = useState<SchoolLocation | null>(null);
   const { state, retry } = useAqi(location);
+  const forecast = useForecast(location); // fetched in parallel; failures never block today's decision
   const data = state.status === "success" ? state.data : undefined;
   const live: LiveInfo | null = data
     ? {
@@ -57,6 +60,7 @@ export default function App() {
         <>
           <ProvenanceStrip data={data} region={REGION} />
           <div className="mx-auto max-w-6xl space-y-16 px-4 py-14 sm:px-6 sm:py-20">
+            <OutlookSection state={forecast.state} onRetry={forecast.retry} />
             <TodayChecklist decision={data.decision} />
             <PollutantSection data={data} />
             <WhyDecision data={data} />

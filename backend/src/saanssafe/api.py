@@ -3,6 +3,7 @@
 Routes:
   GET /health                -> {"status": "ok"}
   GET /aqi?lat=<f>&lon=<f>   -> current forecast/model AQI (see report_body)
+  GET /forecast?lat=&lon=    -> deterministic 72-hour school outlook (see forecast_body)
 
 Configuration (environment variables):
   AQI_CACHE_TABLE        required  DynamoDB table name
@@ -18,7 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -42,8 +43,9 @@ from saanssafe.providers.base import (
     ProviderUnavailableError,
     validate_coordinates,
 )
+from saanssafe.outlook import BEST_SCHOOL_PERIOD_RULE, HourOutlook, Period
 from saanssafe.providers.open_meteo import DEFAULT_BASE_URL
-from saanssafe.service import AqiReport, AqiService
+from saanssafe.service import AqiReport, AqiService, ForecastReport
 
 logger = logging.getLogger("saanssafe")
 logger.setLevel(logging.INFO)
@@ -246,15 +248,110 @@ def report_body(report: AqiReport) -> dict[str, Any]:
     }
 
 
+def _hour_body(hour: HourOutlook | None) -> dict[str, Any] | None:
+    """One outlook hour. Values are the CPCB engine's and the SaansSafe policy's own."""
+    if hour is None:
+        return None
+    body: dict[str, Any] = {"valid_for_hour": _iso(hour.valid_for_hour)}
+    if hour.result is None or hour.decision is None:
+        return {**body, "aqi": None, "dominant_pollutant": None, "decision": None}
+    d = hour.decision
+    return {
+        **body,
+        "aqi": {
+            "value": hour.result.aqi,
+            "display": hour.result.display,
+            "beyond_scale": hour.result.beyond_scale,
+            "category": hour.result.category.label,
+        },
+        "dominant_pollutant": {
+            "code": d.dominant_pollutant.value,
+            "name": d.dominant_pollutant_name,
+            "sub_index": round(d.dominant_sub_index, 1),
+            "beyond_scale": d.beyond_scale,
+        },
+        "decision": {
+            "action": d.action.value,
+            "severity": d.severity.value,
+            "headline": d.headline,
+            "restricted": hour.restricted,
+        },
+    }
+
+
+def _period_body(period: Period | None) -> dict[str, Any] | None:
+    if period is None:
+        return None
+    return {
+        "label": period.label,
+        "part": period.part,
+        "date": period.day.isoformat(),
+        "start": _iso(period.start),
+        "end": _iso(period.end),
+        "hours": len(period.hours),
+        "school_hours": period.school_hours,
+        "school_day": period.school_day,
+        "partial": period.partial,
+        "worst": _hour_body(period.worst),
+    }
+
+
+def forecast_body(report: ForecastReport) -> dict[str, Any]:
+    """GET /forecast: deterministic 72-hour school outlook (forecast/model data)."""
+    outlook = report.outlook
+    return {
+        "data_type": DATA_TYPE,
+        "method": METHOD,
+        "disclaimer": DISCLAIMER,
+        "timezone": "Asia/Kolkata",
+        "location": {
+            "requested": {"lat": report.requested_lat, "lon": report.requested_lon},
+            "query": {"lat": report.query_lat, "lon": report.query_lon},
+            "model_grid": {"lat": report.grid_lat, "lon": report.grid_lon},
+        },
+        "coverage": {
+            "start": _iso(outlook.hours[0].valid_for_hour),
+            "end": _iso(outlook.hours[-1].valid_for_hour),
+            "hours": len(outlook.hours),
+            "requested_hours": outlook.requested_hours + 1,
+            "complete": outlook.complete,
+        },
+        "hours": [_hour_body(h) for h in outlook.hours],
+        "periods": [_period_body(p) for p in outlook.periods],
+        "summary": {
+            "now": _hour_body(outlook.hours[0]),
+            "worst": _hour_body(outlook.worst),
+            "next_change": _hour_body(outlook.next_change),
+            "first_restricted": _hour_body(outlook.first_restricted),
+            "best_school_period": _period_body(outlook.best_school_period),
+            "best_school_period_rule": BEST_SCHOOL_PERIOD_RULE,
+        },
+        "policy": {"name": POLICY_NAME, "version": POLICY_VERSION, "basis": POLICY_BASIS},
+        "freshness": {
+            "status": report.freshness.value,
+            "cache": report.cache.value,
+            "fetched_at": _iso(report.fetched_at),
+            "age_minutes": int(report.age.total_seconds() // 60),
+            "warning": report.warning,
+        },
+        "source": {"provider": report.source, "attribution": ATTRIBUTION},
+    }
+
+
 # --- Routing --------------------------------------------------------------------------------
 
-def _aqi(event: Mapping[str, Any], service: AqiService):
+def _serve(
+    event: Mapping[str, Any],
+    compute: Callable[[float, float], Any],
+    body: Callable[[Any], dict[str, Any]],
+):
+    """Shared coordinate parsing and error mapping for /aqi and /forecast."""
     try:
         lat, lon = _parse_coordinates(event.get("queryStringParameters") or {})
     except ValueError as err:
         return _error(400, "invalid_coordinates", str(err))
     try:
-        report = service.current_aqi(lat, lon)
+        report = compute(lat, lon)
     except InsufficientDataError as err:
         return _error(422, "insufficient_data", f"Not enough forecast data for an AQI: {err}")
     except ProviderUnavailableError:
@@ -270,7 +367,7 @@ def _aqi(event: Mapping[str, Any], service: AqiService):
     except ProviderResponseError:
         logger.exception("upstream returned invalid data")
         return _error(502, "upstream_invalid", "The air-quality data source returned invalid data.")
-    return _response(200, report_body(report))
+    return _response(200, body(report))
 
 
 def handle(event: Mapping[str, Any], service: AqiService | None = None):
@@ -278,13 +375,16 @@ def handle(event: Mapping[str, Any], service: AqiService | None = None):
     try:
         method = event.get("requestContext", {}).get("http", {}).get("method", "")
         path = event.get("rawPath", "")
-        if path not in ("/health", "/aqi"):
+        if path not in ("/health", "/aqi", "/forecast"):
             return _error(404, "not_found", "Unknown path")
         if method != "GET":
             return _error(405, "method_not_allowed", "Only GET is supported", {"Allow": "GET"})
         if path == "/health":
             return _response(200, {"status": "ok"})
-        return _aqi(event, service or _get_service())
+        svc = service or _get_service()
+        if path == "/forecast":
+            return _serve(event, svc.forecast, forecast_body)
+        return _serve(event, svc.current_aqi, report_body)
     except Exception:
         logger.exception("unhandled error")
         return _error(500, "internal_error", "Unexpected server error")

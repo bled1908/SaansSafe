@@ -98,6 +98,12 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /aqi
             Method: GET
+        Forecast:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /forecast
+            Method: GET
 
   ApiFunctionLogGroup:
     Type: AWS::Logs::LogGroup

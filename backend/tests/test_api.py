@@ -36,6 +36,9 @@ class StubService:
     def current_aqi(self, lat, lon):
         raise self.error
 
+    def forecast(self, lat, lon):
+        raise self.error
+
 
 def call(evt, service):
     response = api.handle(evt, service)
@@ -306,3 +309,116 @@ def test_error_responses_have_no_decision(error):
 
 def test_decision_is_deterministic_across_requests():
     assert aqi_body()["decision"] == aqi_body()["decision"]
+
+
+# --- GET /forecast -------------------------------------------------------------------------------
+
+def forecast_body(series=None, cache=None, provider_error=None, params=None):
+    provider = FakeProvider(series=series if series is not None else make_series(hours=130), error=provider_error)
+    status, body, headers = call(
+        event("/forecast", params=params or {"lat": "28.6139", "lon": "77.209"}), real_service(provider, cache)
+    )
+    return status, body, headers
+
+
+def test_forecast_contract():
+    status, body, headers = forecast_body()
+    assert status == 200 and headers["Cache-Control"] == "no-store"
+    assert set(body) == {
+        "data_type", "method", "disclaimer", "timezone", "location", "coverage", "hours",
+        "periods", "summary", "policy", "freshness", "source",
+    }
+    assert body["data_type"] == "forecast_model"
+    assert body["timezone"] == "Asia/Kolkata"
+    assert body["coverage"] == {
+        "start": "2026-10-08T06:00:00Z", "end": "2026-10-11T06:00:00Z",
+        "hours": 73, "requested_hours": 73, "complete": True,
+    }
+    assert len(body["hours"]) == 73
+    assert body["policy"]["version"] == "saanssafe-school-v1"
+    assert "not a CPCB rule" in body["policy"]["basis"]
+    assert "CPCB AQI" not in json.dumps(body)
+
+
+def test_forecast_hour_shape_comes_from_engine_and_policy():
+    _, body, _ = forecast_body()
+    hour = body["hours"][0]
+    assert hour == {
+        "valid_for_hour": "2026-10-08T06:00:00Z",
+        "aqi": {"value": 150, "display": "150", "beyond_scale": False, "category": "Moderate"},
+        "dominant_pollutant": {"code": "pm10", "name": "PM10 (coarse particulate matter)",
+                               "sub_index": 150.0, "beyond_scale": False},
+        "decision": {"action": "reduce_outdoor_exertion", "severity": "moderate",
+                     "headline": "Reduce strenuous outdoor activity", "restricted": True},
+    }
+
+
+def test_forecast_now_matches_aqi_endpoint():
+    _, fbody, _ = forecast_body()
+    abody = aqi_body(make_series(hours=130))
+    assert fbody["summary"]["now"]["aqi"]["display"] == abody["aqi"]["display"]
+    assert fbody["summary"]["now"]["decision"]["action"] == abody["decision"]["action"]
+
+
+def test_forecast_periods_and_summary():
+    _, body, _ = forecast_body()
+    assert [p["label"] for p in body["periods"]][:3] == ["This morning", "This afternoon", "Tonight"]
+    first = body["periods"][0]
+    assert (first["hours"], first["partial"], first["school_hours"], first["part"]) == (1, True, True, "morning")
+    afternoon = body["periods"][1]  # 12:30-18:30 IST = 07:00-13:00 UTC
+    assert (afternoon["start"], afternoon["end"], afternoon["hours"]) == ("2026-10-08T07:00:00Z", "2026-10-08T13:00:00Z", 6)
+    summary = body["summary"]
+    assert set(summary) == {
+        "now", "worst", "next_change", "first_restricted", "best_school_period", "best_school_period_rule",
+    }
+    assert summary["next_change"] is None  # steady air in the fixture
+    assert summary["best_school_period"]["school_hours"] is True
+    assert summary["best_school_period"]["school_day"] is True
+    assert summary["best_school_period"]["partial"] is False
+    assert summary["best_school_period_rule"] == (
+        "SaansSafe v1 treats Monday–Friday as school days for best-school-window selection."
+    )
+    weekend = [p for p in body["periods"] if p["label"].startswith(("Saturday", "Sunday"))]
+    assert weekend and all(p["school_day"] is False for p in weekend)
+
+
+def test_forecast_severe_hours_are_401_plus():
+    _, body, _ = forecast_body(series=make_series(hours=130, pm2_5=400.0))
+    worst = body["summary"]["worst"]
+    assert worst["aqi"]["display"] == "401+" and worst["aqi"]["beyond_scale"] is True
+    assert worst["decision"]["severity"] == "critical"
+
+
+def test_forecast_partial_coverage_is_flagged():
+    _, body, _ = forecast_body(series=make_series(hours=96))
+    assert body["coverage"]["complete"] is False
+    assert body["coverage"]["hours"] == 66 and body["coverage"]["requested_hours"] == 73
+
+
+def test_forecast_stale_fallback_is_explicit():
+    cache = FakeCache({KEY: CachedSeries(make_series(hours=130), NOW - timedelta(minutes=95))})
+    status, body, _ = forecast_body(cache=cache, provider_error=ProviderUnavailableError("down"))
+    assert status == 200
+    assert body["freshness"]["status"] == "stale" and body["freshness"]["cache"] == "stale_fallback"
+    assert "95 minutes ago" in body["freshness"]["warning"]
+
+
+@pytest.mark.parametrize(
+    ("error", "status", "code"),
+    [
+        (InsufficientDataError("x"), 422, "insufficient_data"),
+        (ProviderRequestError("x"), 502, "upstream_rejected"),
+        (ProviderResponseError("x"), 502, "upstream_invalid"),
+        (ProviderUnavailableError("x"), 503, "upstream_unavailable"),
+        (RuntimeError("secret internal detail"), 500, "internal_error"),
+    ],
+)
+def test_forecast_error_mapping_matches_aqi(error, status, code):
+    got, body, _ = call(event("/forecast", params={"lat": "28.6", "lon": "77.2"}), StubService(error))
+    assert (got, body["error"]["code"]) == (status, code)
+    assert "secret internal detail" not in body["error"]["message"]
+
+
+def test_forecast_rejects_bad_coordinates_and_methods():
+    assert forecast_body(params={"lat": "91", "lon": "77"})[0] == 400
+    assert call(event("/forecast", "POST", {"lat": "1", "lon": "1"}), real_service())[0] == 405
