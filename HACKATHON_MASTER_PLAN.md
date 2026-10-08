@@ -2,6 +2,7 @@
 
 > Status: **Concept locked: SaansSafe (Air track). AWS account 703321058941 confirmed.**
 > Day-1 milestones: [x] M0 repo setup · [x] M1 AQI + tests (CPCB-verified, 124 passing) · [x] M2 provider/API/cache (Open-Meteo data layer + GET /aqi handler, AqiService and DynamoDB cache; 256 tests, all with fakes; a one-off manual integration check against the live Open-Meteo API with Delhi coordinates passed on 2026-10-08 (not part of the test suite, no AQI value recorded); deployed in M3. Note: Open-Meteo = CAMS model/forecast data, not CPCB station observations) · [x] M3 SAM deploy + smoke test (2026-10-08: stack `saanssafe-dev` deployed to ap-south-1 via a reviewed change set, CREATE_COMPLETE. Deployed `GET /health` 200 and `GET /aqi` 200 smoke tests passed; the response is labelled forecast/model AQI from CAMS data via Open-Meteo, not a CPCB station reading. DynamoDB cache verified: 1st request miss → Open-Meteo fetch → item written; 2nd request cache hit. CORS preflight from localhost:5173 OK; no Lambda errors in CloudWatch) · [ ] M4 frontend · [ ] M5 S3+CloudFront live URL
+> M4 backend checkpoint (2026-10-08, commit `72b0b1a`): [x] deterministic school safety Decision Engine (`decision.py`, SaansSafe policy `saanssafe-school-v1`, not a CPCB rule) integrated into `/aqi` as an additive `decision` block; CPCB Table 3.12 health statements corrected to verbatim. Updated Lambda deployed to `saanssafe-dev` (change set: `ApiFunction` code only) and live-verified: decision present, forecast_model labelling, policy/CPCB attribution, cache miss→hit, CORS, 400/404 unchanged, no CloudWatch errors. 330 backend tests. The M4 frontend is still to do.
 > Written 2026-10-08 (Day 1). Sources: `claude_read_this/{overview,rules,schedule,mentors,community_partners}.md` and `claude_read_this/previous_winners/*.html` (First Commit, event 01).
 > Future sessions: read this file and `SUBMISSION_CHECKLIST.md` instead of re-reading `claude_read_this/`.
 
@@ -116,7 +117,7 @@ Design principles:
 | **P0** | Git repo created after kickoff + public GitHub remote + LICENSE + `.gitignore` (excluding `claude_read_this/`) |
 | P0 | SAM stack deployed: API Gateway → Lambda → DynamoDB, live URL (walking skeleton, **Day 1**) |
 | P0 | AQI ingest (Open-Meteo forecast) + CPCB Indian AQI calculation (unit-tested) |
-| P0 | Decision engine: per-hour outdoor-activity verdict for a school day |
+| P0 | Decision engine: per-hour outdoor-activity verdict for a school day (**partial:** current-hour decision done and deployed in `/aqi`; per-hour/school-day verdict still to do) |
 | P0 | Frontend: location/school picker → AQI now, 72h strip, decision card. Deployed |
 | P0 | Strands agent on Bedrock generating the parent notice (EN + Hindi) |
 | P0 | Video ≤3 min showing AWS · writeup with AI-tools disclosure · README · form submitted |
