@@ -4,9 +4,9 @@ A NoticeWriter turns NoticeFacts into a ParentNotice in facts.language. It is ne
 authoritative: notice_service validates every result with notice_guard and serves the
 deterministic template whenever the writer fails, is slow, or is disabled.
 
-Only FakeNoticeWriter exists for now. The planned StrandsBedrockWriter (Strands Agents +
-Amazon Bedrock, no tools, structured output) will implement the same protocol; nothing
-here imports strands or calls Bedrock.
+FakeNoticeWriter is for tests. StrandsBedrockWriter (saanssafe.notice_bedrock: Strands
+Agents + Amazon Bedrock, no tools, structured output) implements the same protocol; this
+module never imports strands or calls Bedrock.
 """
 
 from __future__ import annotations
@@ -20,6 +20,10 @@ from saanssafe.notice_facts import NoticeFacts, ParentNotice
 
 class NoticeWriterError(Exception):
     """The writer could not produce a notice (service error, throttling, bad output)."""
+
+
+class NoticeWriterTimeout(NoticeWriterError, TimeoutError):
+    """The writer's own network timeout fired; the service reports it as "ai_timeout"."""
 
 
 class NoticeWriter(Protocol):

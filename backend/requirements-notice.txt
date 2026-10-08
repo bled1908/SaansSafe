@@ -1,0 +1,6 @@
+# Extra runtime dependency of the NoticeFunction (Parent Notice AI writer) only.
+# The ApiFunction (/health, /aqi, /forecast) and the template-only notice path need none.
+# Verified build (Python 3.13, arm64, manylinux2014 wheels; ~59 MB unzipped):
+#   uv pip install --python 3.13 --python-platform aarch64-manylinux2014 \
+#     --only-binary :all: --target <build dir> -r requirements-notice.txt
+strands-agents==1.59.0
