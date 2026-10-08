@@ -70,24 +70,48 @@ AVERAGING_HOURS: Mapping[Pollutant, int] = MappingProxyType(
 
 
 class Category(Enum):
-    """CPCB AQI categories with their index range and health impact statement."""
+    """CPCB AQI categories with their index range and health impact statement.
 
-    GOOD = ("Good", 0, 50, "Minimal impact")
-    SATISFACTORY = ("Satisfactory", 51, 100, "Minor breathing discomfort to sensitive people")
+    health_impact is quoted verbatim from CPCB National AQI report CUPS/82/2014-15,
+    Table 3.12 "Health Statements for AQI Categories" (PDF p.38 / printed p.36).
+    Only PDF line-wrap whitespace is normalized. Do not paraphrase.
+    """
+
+    GOOD = ("Good", 0, 50, "Minimal Impact")
+    SATISFACTORY = (
+        "Satisfactory",
+        51,
+        100,
+        "May cause minor breathing discomfort to sensitive people",
+    )
     MODERATE = (
         "Moderate",
         101,
         200,
-        "Breathing discomfort to people with lung disease such as asthma, and to "
-        "people with heart disease, children and older adults",
+        "May cause breathing discomfort to the people with lung disease such as asthma and "
+        "discomfort to people with heart disease, children and older adults",
     )
-    POOR = ("Poor", 201, 300, "Breathing discomfort to most people on prolonged exposure")
-    VERY_POOR = ("Very Poor", 301, 400, "Respiratory illness on prolonged exposure")
+    POOR = (
+        "Poor",
+        201,
+        300,
+        "May cause breathing discomfort to people on prolonged exposure and discomfort to "
+        "people with heart disease with short exposure",
+    )
+    VERY_POOR = (
+        "Very Poor",
+        301,
+        400,
+        "May cause respiratory illness to the people on prolonged exposure. Effect may be "
+        "more pronounced in people with lung and heart diseases",
+    )
     SEVERE = (
         "Severe",
         401,
         500,
-        "Affects healthy people and seriously impacts those with existing diseases",
+        "May cause respiratory effects even on healthy people and serious health impacts on "
+        "people with lung/heart diseases. The health impacts may be experienced even during "
+        "light physical activity",
     )
 
     def __init__(self, label: str, low: int, high: int, health_impact: str) -> None:

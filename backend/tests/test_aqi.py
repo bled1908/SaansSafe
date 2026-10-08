@@ -185,6 +185,40 @@ def test_category_rejects_invalid_aqi(bad):
         category_for(bad)
 
 
+# Verbatim from CPCB National AQI report CUPS/82/2014-15, Table 3.12
+# "Health Statements for AQI Categories" (PDF p.38 / printed p.36).
+CPCB_TABLE_3_12 = {
+    Category.GOOD: "Minimal Impact",
+    Category.SATISFACTORY: "May cause minor breathing discomfort to sensitive people",
+    Category.MODERATE: (
+        "May cause breathing discomfort to the people with lung disease such as asthma and "
+        "discomfort to people with heart disease, children and older adults"
+    ),
+    Category.POOR: (
+        "May cause breathing discomfort to people on prolonged exposure and discomfort to "
+        "people with heart disease with short exposure"
+    ),
+    Category.VERY_POOR: (
+        "May cause respiratory illness to the people on prolonged exposure. Effect may be "
+        "more pronounced in people with lung and heart diseases"
+    ),
+    Category.SEVERE: (
+        "May cause respiratory effects even on healthy people and serious health impacts on "
+        "people with lung/heart diseases. The health impacts may be experienced even during "
+        "light physical activity"
+    ),
+}
+
+
+@pytest.mark.parametrize("category", list(Category))
+def test_health_impact_matches_cpcb_table_3_12_verbatim(category):
+    assert category.health_impact == CPCB_TABLE_3_12[category]
+
+
+def test_health_impact_has_no_doubled_whitespace():
+    assert all("  " not in c.health_impact for c in Category)
+
+
 def test_categories_have_labels_and_health_impact():
     assert Category.VERY_POOR.label == "Very Poor"
     assert all(c.health_impact for c in Category)

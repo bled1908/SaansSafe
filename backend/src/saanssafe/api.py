@@ -30,6 +30,12 @@ from saanssafe.aqi import (
     Pollutant,
     is_beyond_scale,
 )
+from saanssafe.decision import (
+    POLICY_BASIS,
+    POLICY_NAME,
+    POLICY_VERSION,
+    decide_school_safety,
+)
 from saanssafe.providers.base import (
     ProviderRequestError,
     ProviderResponseError,
@@ -52,6 +58,7 @@ ATTRIBUTION = (
     "Air quality data: Open-Meteo.com, based on CAMS "
     "(Copernicus Atmosphere Monitoring Service)"
 )
+CPCB_HEALTH_SOURCE = "CPCB National AQI report CUPS/82/2014-15, Table 3.12"
 MAX_PARAM_LENGTH = 32
 RETRY_AFTER_SECONDS = 60
 
@@ -154,6 +161,47 @@ def _parse_coordinates(params: Mapping[str, str]) -> tuple[float, float]:
     return validate_coordinates(values[0], values[1])  # rejects nan/inf/out of range
 
 
+def decision_body(report: AqiReport) -> dict[str, Any]:
+    """Deterministic school safety decision (SaansSafe policy) for this report's AQI.
+
+    Keeps three things apart: the CPCB category/health statement, SaansSafe's school
+    policy, and the forecast/model nature of the data (including its freshness).
+    """
+    d = decide_school_safety(report.result)
+    return {
+        "action": d.action.value,
+        "severity": d.severity.value,
+        "headline": d.headline,
+        "short_reason": d.short_reason,
+        "recommendations": list(d.recommendations),
+        "activities": {activity.value: guidance.value for activity, guidance in d.activities.items()},
+        "aqi_context": {
+            "value": d.aqi_value,
+            "display": d.aqi_display,
+            "beyond_scale": d.beyond_scale,
+            "category": d.category.label,
+            "data_type": DATA_TYPE,
+        },
+        "cpcb_health_statement": {
+            "category": d.category.label,
+            "text": d.health_impact,
+            "source": CPCB_HEALTH_SOURCE,
+        },
+        "dominant_pollutant": {
+            "code": d.dominant_pollutant.value,
+            "name": d.dominant_pollutant_name,
+            "sub_index": round(d.dominant_sub_index, 1),
+            "beyond_scale": d.beyond_scale,
+        },
+        "policy": {"name": POLICY_NAME, "version": POLICY_VERSION, "basis": POLICY_BASIS},
+        "data_freshness": {
+            "status": report.freshness.value,
+            "age_minutes": int(report.age.total_seconds() // 60),
+            "warning": report.warning,
+        },
+    }
+
+
 def report_body(report: AqiReport) -> dict[str, Any]:
     result = report.result
     pollutants = {}
@@ -194,6 +242,7 @@ def report_body(report: AqiReport) -> dict[str, Any]:
         },
         "source": {"provider": report.source, "attribution": ATTRIBUTION},
         "notes": [BEYOND_SCALE_NOTE] if result.beyond_scale else [],
+        "decision": decision_body(report),
     }
 
 
