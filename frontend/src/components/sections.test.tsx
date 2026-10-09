@@ -125,4 +125,57 @@ describe("LocationChip", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  function stubViewport(desktop: boolean) {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: desktop,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+  }
+
+  // The sticky header uses backdrop-filter, which makes it the containing block for
+  // position: fixed descendants. A sheet rendered inside it was pinned to the header
+  // and pushed above the top of phone viewports.
+  it("renders the mobile sheet outside the header so it is fixed to the viewport", async () => {
+    stubViewport(false);
+    render(
+      <header data-testid="header">
+        <LocationChip selected={null} onSelect={() => {}} />
+      </header>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /choose a location/i }));
+    const dialog = screen.getByRole("dialog", { name: /choose a location/i });
+    expect(screen.getByTestId("header")).not.toContainElement(dialog);
+    expect(dialog.parentElement).toBe(document.body);
+  });
+
+  it("closes the mobile sheet when the backdrop is tapped", async () => {
+    stubViewport(false);
+    render(<LocationChip selected={null} onSelect={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: /choose a location/i }));
+    await userEvent.click(screen.getByTestId("location-backdrop"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("keeps the desktop dropdown anchored next to the location button", async () => {
+    stubViewport(true);
+    render(
+      <header data-testid="header">
+        <LocationChip selected={null} onSelect={() => {}} />
+      </header>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /choose a location/i }));
+    expect(screen.getByTestId("header")).toContainElement(screen.getByRole("dialog"));
+    expect(screen.queryByTestId("location-backdrop")).not.toBeInTheDocument();
+  });
+
+  it("keeps the dialog open when tapping inside it", async () => {
+    stubViewport(false);
+    render(<LocationChip selected={null} onSelect={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: /choose a location/i }));
+    await userEvent.click(screen.getByText(/not real school records/i));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });

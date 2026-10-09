@@ -1,8 +1,22 @@
 import { Check, ChevronDown, LocateFixed, MapPin } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { SAMPLE_LOCATIONS, locationFromPosition, type SchoolLocation } from "../lib/locations";
 
 const GEO_OPTIONS: PositionOptions = { enableHighAccuracy: false, timeout: 10_000, maximumAge: 600_000 };
+
+/** Tailwind's `sm` breakpoint: dropdown at and above it, bottom sheet below it. */
+const DESKTOP_QUERY = "(min-width: 40rem)";
+
+function subscribeDesktop(onChange: () => void) {
+  const query = window.matchMedia?.(DESKTOP_QUERY);
+  query?.addEventListener("change", onChange);
+  return () => query?.removeEventListener("change", onChange);
+}
+
+function isDesktopViewport(): boolean {
+  return window.matchMedia?.(DESKTOP_QUERY).matches ?? false;
+}
 
 function geolocationMessage(error: GeolocationPositionError): string {
   switch (error.code) {
@@ -114,7 +128,9 @@ interface ChipProps {
 /** Compact header control: a chip that opens a dropdown (desktop) or bottom sheet (mobile). */
 export function LocationChip({ selected, onSelect }: ChipProps) {
   const [open, setOpen] = useState(false);
+  const isDesktop = useSyncExternalStore(subscribeDesktop, isDesktopViewport, () => false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const close = useCallback((restoreFocus: boolean) => {
@@ -128,7 +144,9 @@ export function LocationChip({ selected, onSelect }: ChipProps) {
       if (e.key === "Escape") close(true);
     };
     const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) close(false);
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      close(false);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("mousedown", onDown);
@@ -142,6 +160,35 @@ export function LocationChip({ selected, onSelect }: ChipProps) {
     onSelect(location);
     close(true);
   }
+
+  const panel = (
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label="Choose a location"
+      className={
+        isDesktop
+          ? "animate-rise absolute left-0 top-full z-50 mt-2 max-h-[calc(100dvh-6rem)] w-[22rem] overflow-y-auto rounded-3xl bg-chalk p-4 pb-6 shadow-2xl ring-1 ring-ink/10"
+          : "animate-rise fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-chalk p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl"
+      }
+    >
+      {!isDesktop && <div aria-hidden className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/20" />}
+      <LocationOptions selected={selected} onSelect={choose} autoFocus />
+    </div>
+  );
+  // The sticky header's backdrop-filter makes it the containing block for position: fixed
+  // descendants, so the mobile sheet is portaled to <body> to stay fixed to the viewport.
+  const mobileSheet = (
+    <>
+      <div
+        aria-hidden
+        data-testid="location-backdrop"
+        className="fixed inset-0 z-40 bg-ink/30"
+        onClick={() => close(false)}
+      />
+      {panel}
+    </>
+  );
 
   return (
     <div ref={wrapRef} className="relative min-w-0">
@@ -163,19 +210,7 @@ export function LocationChip({ selected, onSelect }: ChipProps) {
         )}
         <ChevronDown aria-hidden className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && (
-        <>
-          <div aria-hidden className="fixed inset-0 z-40 bg-ink/30 sm:hidden" onClick={() => close(false)} />
-          <div
-            role="dialog"
-            aria-label="Choose a location"
-            className="animate-rise fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-chalk p-4 pb-6 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-2 sm:w-[22rem] sm:rounded-3xl sm:ring-1 sm:ring-ink/10"
-          >
-            <div aria-hidden className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/20 sm:hidden" />
-            <LocationOptions selected={selected} onSelect={choose} autoFocus />
-          </div>
-        </>
-      )}
+      {open && (isDesktop ? panel : createPortal(mobileSheet, document.body))}
     </div>
   );
 }
