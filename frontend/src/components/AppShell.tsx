@@ -1,9 +1,29 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { formatIstTime } from "../lib/format";
 
+const MINUTE_MS = 60_000;
+
+/** The browser's current time, re-rendered at each minute boundary. */
+function useCurrentMinute(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        setNow(new Date());
+        schedule();
+      }, MINUTE_MS - (Date.now() % MINUTE_MS));
+    };
+    schedule();
+    return () => clearTimeout(timer);
+  }, []);
+  return now;
+}
+
+/** Data freshness and the API's AWS region. The time shown is the current clock, not the data time. */
 export interface LiveInfo {
   status: "fresh" | "stale";
   region: string | null;
-  time: string; // e.g. "5:54 pm IST", from the API's fetched_at
 }
 
 interface Props {
@@ -15,12 +35,15 @@ interface Props {
 
 function LiveIndicator({ live }: { live: LiveInfo }) {
   const fresh = live.status === "fresh";
+  const now = useCurrentMinute();
   return (
     <p className="flex shrink-0 items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-ink/70">
       <span className={`live-dot inline-block size-2 rounded-full ${fresh ? "bg-sev-minimal text-sev-minimal" : "bg-amber-500 text-amber-500"}`} />
-      <span>{fresh ? "Live" : "Stale"}</span>
+      <span>{fresh ? "Fresh" : "Stale"}</span>
       {live.region && <span className="hidden md:inline">· {live.region}</span>}
-      <span className="hidden md:inline">· {live.time}</span>
+      <time dateTime={now.toISOString()} className="hidden md:inline">
+        · {formatIstTime(now.toISOString())} IST
+      </time>
     </p>
   );
 }

@@ -1,10 +1,11 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/client";
 import { SAMPLE_LOCATIONS } from "../lib/locations";
 import { makeAqiResponse, makeSevereResponse, makeStaleResponse } from "../test/fixtures";
 import { ActivityPills, TodayChecklist } from "./ActivityGuidance";
+import { AppShell } from "./AppShell";
 import { DecisionHero } from "./DecisionHero";
 import { ErrorState } from "./StateViews";
 
@@ -92,5 +93,41 @@ describe("ErrorState", () => {
   it("hides retry for non-retryable errors", () => {
     render(<ErrorState error={new ApiError("invalid_coordinates", "bad", 400)} onRetry={() => {}} />);
     expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("AppShell live indicator", () => {
+  it("shows the current IST time, advances every minute and clears its timer on unmount", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-09T04:23:40Z")); // 9:53 am IST
+    try {
+      const { unmount } = render(
+        <AppShell locationControl={null} live={{ status: "fresh", region: "ap-south-1" }} footer={null}>
+          {null}
+        </AppShell>,
+      );
+      const banner = screen.getByRole("banner");
+      expect(banner).toHaveTextContent("Fresh· ap-south-1· 9:53 am IST");
+      expect(within(banner).queryByText("Live")).not.toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(20_000)); // reaches 9:54:00
+      expect(banner).toHaveTextContent("9:54 am IST");
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(banner).toHaveTextContent("9:55 am IST");
+
+      unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("labels stale data as stale", () => {
+    render(
+      <AppShell locationControl={null} live={{ status: "stale", region: null }} footer={null}>
+        {null}
+      </AppShell>,
+    );
+    expect(screen.getByRole("banner")).toHaveTextContent("Stale");
   });
 });

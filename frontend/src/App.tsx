@@ -14,7 +14,6 @@ import { EmptyState, ErrorState, LoadingState } from "./components/StateViews";
 import { WhyDecision } from "./components/WhyDecision";
 import { useAqi } from "./hooks/useAqi";
 import { useForecast } from "./hooks/useForecast";
-import { formatIstTime } from "./lib/format";
 import type { SchoolLocation } from "./lib/locations";
 
 const REGION = apiRegion();
@@ -34,13 +33,7 @@ export default function App() {
   const { state, retry } = useAqi(location);
   const forecast = useForecast(location); // fetched in parallel; failures never block today's decision
   const data = state.status === "success" ? state.data : undefined;
-  const live: LiveInfo | null = data
-    ? {
-        status: data.freshness.status,
-        region: REGION,
-        time: `${formatIstTime(data.freshness.fetched_at)} IST`,
-      }
-    : null;
+  const live: LiveInfo | null = data ? { status: data.freshness.status, region: REGION } : null;
 
   return (
     <AppShell
