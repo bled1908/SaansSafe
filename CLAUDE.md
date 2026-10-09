@@ -49,10 +49,13 @@ This is the SaansSafe entry for **Environmental Hacks** (WeMakeDevs × AWS, Bhar
 - **Implemented and tested (M2):** the Open-Meteo data layer (`readings.py`, `providers/`) plus the `/aqi` API, service and DynamoDB cache (`api.py`, `service.py`, `cache.py`), all against fakes.
 - **M3 (deployed and verified, 2026-10-08):** stack **`saanssafe-dev`** in ap-south-1. API base URL: `https://paqffn4eq5.execute-api.ap-south-1.amazonaws.com` (`/health`, `/aqi?lat=&lon=`). Smoke tests passed, and DynamoDB cache miss → fetch → hit was verified. AWS charges may apply; demo usage is expected to be low.
 - **Decision engine (backend part of M4, deployed and live-verified 2026-10-08, commit `72b0b1a`):** the deterministic school safety Decision Engine is integrated into `/aqi`. The live `saanssafe-dev` Lambda returns the `decision` block (SaansSafe school safety policy `saanssafe-school-v1`, current hour only).
-- **F2 frontend (committed `1637f17`, not hosted):** decision-first "sky" UI in `frontend/`; the API is the single source of truth (the browser never calculates AQI, category, severity or actions).
-- **F3 72-hour outlook (implemented and tested, NOT committed or deployed yet):** `backend/src/saanssafe/outlook.py` + `GET /forecast`, rendered by `frontend/src/components/OutlookSection.tsx`. The provider now requests `forecast_days=4` (`past_days=1`, GMT), which guarantees ≥72 h beyond the current UTC hour. The live `saanssafe-dev` stack does not serve `/forecast` until it's redeployed.
-- **Not implemented yet:** hosting (M5), parent notice, Ask SaansSafe (Strands/Bedrock), and the remaining milestones in the master plan.
-- Milestone progress is tracked at the top of `HACKATHON_MASTER_PLAN.md`.
+- **F2 frontend (committed `1637f17`):** decision-first "sky" UI in `frontend/`; the API is the single source of truth (the browser never calculates AQI, category, severity or actions).
+- **F3 72-hour outlook (committed `ca2c761`, deployed):** `backend/src/saanssafe/outlook.py` + `GET /forecast`, rendered by `frontend/src/components/OutlookSection.tsx`. The provider requests `forecast_days=4` (`past_days=1`, GMT), which guarantees ≥72 h beyond the current UTC hour.
+- **Parent notice (deployed):** deterministic English/Hindi notices via `POST /notice` (`NoticeFunction`, `notice_*.py`) and `frontend/src/components/ParentNotice.tsx`. The optional Strands/Bedrock writer (`notice_bedrock.py`) is in code but **not active**: Bedrock access is not authorized, Strands isn't packaged, and the stack sets `NOTICE_AI_ENABLED=false`.
+- **M5 hosting (deployed, commit `9e1b356`):** stack **`saanssafe-web`** (`infra/web/`): private S3 + CloudFront OAC, live at `https://d316zs0sydbi1r.cloudfront.net`. Deploy and upload steps are in `README.md`. Remove `backend/src/**/__pycache__` before any backend `sam deploy`, so local bytecode isn't packaged.
+- **Not implemented:** Ask SaansSafe (Strands/Bedrock Q&A).
+- `README.md` is the judge-facing source of truth; `HACKATHON_MASTER_PLAN.md` is historical.
+- Milestone history is at the top of `HACKATHON_MASTER_PLAN.md`.
 - The AQI engine's rules were verified against CPCB's report and decided (master plan §12). Change them only with a cited CPCB source.
 
 - `claude_read_this/overview.md`: tracks, prizes, the AWS tool menu, judging criteria

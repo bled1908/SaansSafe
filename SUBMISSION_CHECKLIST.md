@@ -9,18 +9,18 @@ Deadline: **Sun Oct 11, 2026**. The form opens 08:00 IST; the exact closing time
 - [ ] Interview eligibility: graduating 2027/2028, registration details correct
 
 ## Repository (public)
-- [ ] First commit is after the kickoff. `git log --reverse | head` checked
-- [ ] Repo is **public**, opens in a signed-out browser
-- [ ] README: problem, who it's for, features, screenshots, **live URL**, **architecture diagram**, AWS services and why, setup and deploy (`sam build && sam deploy`), video link
-- [ ] LICENSE file (MIT)
-- [ ] Credits: every third-party library, API and data source (Open-Meteo, CPCB/data.gov.in, …)
-- [ ] AI coding tools disclosed (Claude Code, …)
-- [ ] No secrets in the tree or history. `claude_read_this/` not committed
-- [ ] IaC (`template.yaml`) in the repo
+- [ ] First commit is after the kickoff. The first commit (`a523bc3`) is 2026-10-08 10:36 IST; confirm against the official kickoff time once it's published
+- [ ] Repo is **public**, opens in a signed-out browser (no git remote is configured yet)
+- [ ] README: problem, who it's for, features, screenshots, **live URL**, **architecture diagram**, AWS services and why, setup and deploy (`sam deploy` per stack; no `sam build` step), video link. Everything is done except the video link
+- [x] LICENSE file (MIT)
+- [x] Credits: every third-party library, API and data source (Open-Meteo, Copernicus CAMS, CPCB report, npm/Python libraries, fonts) in the README
+- [x] AI coding tools disclosed (Claude Code) in the README
+- [ ] No secrets in the tree or history. `claude_read_this/` never committed (checked). No keys or `.env` files in history. Account ID and IAM user name were redacted from `HACKATHON_MASTER_PLAN.md` at HEAD but remain in commit `a523bc3`; decide whether that's acceptable before going public
+- [x] IaC in the repo: `backend/template.yaml`, `infra/web/template.yaml`
 
 ## AWS usage
-- [ ] Uses ≥1 AWS open-source tool (Strands Agents SDK, SAM CLI) **and/or** is deployed on AWS
-- [ ] Live URL works from mobile, in incognito
+- [x] Uses ≥1 AWS open-source tool (SAM CLI; Strands Agents SDK is in code but not active in production) **and** is deployed on AWS
+- [x] Live URL works on mobile (checked at 320–390 px in a clean browser profile); recheck on a real phone in incognito before submitting
 - [ ] Budgets alarm set. Free-tier and credits usage checked
 
 ## Demo video
