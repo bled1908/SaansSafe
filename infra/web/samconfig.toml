@@ -1,0 +1,15 @@
+# SAM CLI configuration for the frontend hosting stack. No secrets.
+version = 0.1
+
+[default.global.parameters]
+stack_name = "saanssafe-web"
+region = "ap-south-1"
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+resolve_s3 = true
+s3_prefix = "saanssafe-web"
+confirm_changeset = true
+fail_on_empty_changeset = false

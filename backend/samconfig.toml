@@ -14,3 +14,5 @@ resolve_s3 = true
 s3_prefix = "saanssafe-dev"
 confirm_changeset = true
 fail_on_empty_changeset = false
+# Local dev server + the CloudFront site (saanssafe-web stack output SiteUrl).
+parameter_overrides = "AllowedOrigins=\"http://localhost:5173,https://d316zs0sydbi1r.cloudfront.net\""
