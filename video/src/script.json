@@ -1,0 +1,828 @@
+{
+  "fps": 30,
+  "voice": {
+    "engine": "generative",
+    "voiceId": "Kajal",
+    "languageCode": "en-IN",
+    "region": "us-east-1",
+    "fallback": {
+      "engine": "neural",
+      "region": "ap-south-1"
+    }
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "chapter": "",
+      "title": "",
+      "beats": [
+        {
+          "id": "hook-1",
+          "say": "Every school morning, before assembly, someone has to decide.",
+          "ssml": "Every school morning, <break time=\"250ms\"/> before assembly, <break time=\"300ms\"/> someone has to decide.",
+          "visual": {
+            "type": "type",
+            "lines": [
+              "Every school morning,",
+              "before assembly,",
+              "someone has to decide."
+            ]
+          },
+          "tail": 0.5
+        },
+        {
+          "id": "hook-2",
+          "say": "Can students go outside today?",
+          "ssml": "Can students go outside today?",
+          "visual": {
+            "type": "matchcut",
+            "text": "Can students go outside today?",
+            "from": 2.4,
+            "to": 4.2
+          },
+          "min": 3.6
+        }
+      ]
+    },
+    {
+      "id": "problem",
+      "chapter": "01",
+      "title": "The gap",
+      "beats": [
+        {
+          "id": "problem-1",
+          "say": "Usually, all you get is a number. 145. Moderate.",
+          "ssml": "Usually, all you get is a number. <break time=\"400ms\"/> 145. <break time=\"300ms\"/> Moderate.",
+          "visual": {
+            "type": "scale",
+            "value": 145
+          }
+        },
+        {
+          "id": "problem-2",
+          "say": "India's AQI categories describe health effects. They don't tell a school what to do about assembly, PE or recess.",
+          "ssml": "India's <sub alias=\"A Q I\">AQI</sub> categories describe health effects. <break time=\"300ms\"/> They don't tell a school what to do about assembly, <break time=\"100ms\"/> <sub alias=\"P E\">PE</sub>, <break time=\"100ms\"/> or recess.",
+          "visual": {
+            "type": "questions",
+            "items": [
+              "Assembly?",
+              "PE & sports?",
+              "Recess?"
+            ],
+            "note": "CPCB categories describe health effects, not school actions"
+          }
+        },
+        {
+          "id": "problem-3",
+          "say": "A number isn't a decision.",
+          "ssml": "A number isn't a decision.",
+          "visual": {
+            "type": "type",
+            "lines": [
+              "A number isn't",
+              "a decision."
+            ],
+            "accent": 1
+          },
+          "tail": 0.6
+        }
+      ]
+    },
+    {
+      "id": "product",
+      "chapter": "02",
+      "title": "The decision",
+      "beats": [
+        {
+          "id": "product-1",
+          "say": "SaansSafe turns that number into a decision.",
+          "ssml": "<sub alias=\"Saans Safe\">SaansSafe</sub> turns that number into a decision.",
+          "visual": {
+            "type": "app",
+            "from": 4.3,
+            "to": 7.6,
+            "camera": [
+              [
+                0,
+                0,
+                1440
+              ],
+              [
+                0,
+                0,
+                1440
+              ]
+            ]
+          }
+        },
+        {
+          "id": "product-2",
+          "say": "For Delhi, right now: reduce strenuous outdoor activity.",
+          "ssml": "For Delhi, right now: <break time=\"250ms\"/> reduce strenuous outdoor activity.",
+          "visual": {
+            "type": "app",
+            "from": 7.6,
+            "to": 10.2,
+            "camera": [
+              [
+                60,
+                60,
+                1300
+              ],
+              [
+                110,
+                90,
+                1180
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.15,
+                "rect": [
+                  160,
+                  170,
+                  500,
+                  135
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "product-3",
+          "say": "Assembly: allowed. PE: limited. Recess: allowed.",
+          "ssml": "Assembly: <break time=\"150ms\"/> allowed. <break time=\"350ms\"/> <sub alias=\"P E\">PE</sub>: <break time=\"150ms\"/> limited. <break time=\"350ms\"/> Recess: <break time=\"150ms\"/> allowed.",
+          "visual": {
+            "type": "app",
+            "from": 10.2,
+            "to": 14.8,
+            "camera": [
+              [
+                110,
+                230,
+                960
+              ],
+              [
+                120,
+                250,
+                900
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.02,
+                "rect": [
+                  164,
+                  405,
+                  208,
+                  96
+                ]
+              },
+              {
+                "at": 0.36,
+                "rect": [
+                  378,
+                  405,
+                  208,
+                  96
+                ]
+              },
+              {
+                "at": 0.7,
+                "rect": [
+                  590,
+                  405,
+                  208,
+                  96
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "product-4",
+          "say": "That call follows SaansSafe's own school policy, not a CPCB rule.",
+          "ssml": "That call follows <sub alias=\"Saans Safe's\">SaansSafe's</sub> own school policy, <break time=\"150ms\"/> not a <sub alias=\"C P C B\">CPCB</sub> rule.",
+          "visual": {
+            "type": "app",
+            "from": 27.7,
+            "to": 30.4,
+            "camera": [
+              [
+                100,
+                250,
+                1000
+              ],
+              [
+                120,
+                290,
+                900
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.2,
+                "rect": [
+                  160,
+                  512,
+                  530,
+                  30
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "product-5",
+          "say": "Switch to Mumbai, and it recalculates for that location.",
+          "ssml": "Switch to Mumbai, <break time=\"150ms\"/> and it recalculates for that location.",
+          "visual": {
+            "type": "app",
+            "from": 14.9,
+            "to": 21.8,
+            "camera": [
+              [
+                0,
+                0,
+                1440
+              ],
+              [
+                380,
+                60,
+                1000
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.62,
+                "rect": [
+                  836,
+                  140,
+                  440,
+                  320
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "provenance",
+      "chapter": "03",
+      "title": "Where the data comes from",
+      "beats": [
+        {
+          "id": "provenance-1",
+          "say": "We're upfront about where the numbers come from.",
+          "ssml": "We're upfront about where the numbers come from.",
+          "visual": {
+            "type": "app",
+            "from": 30.4,
+            "to": 33.6,
+            "camera": [
+              [
+                0,
+                0,
+                1440
+              ],
+              [
+                0,
+                20,
+                1400
+              ]
+            ]
+          }
+        },
+        {
+          "id": "provenance-2",
+          "say": "They're CAMS model forecasts via Open-Meteo, not readings from CPCB monitoring stations, and every screen says so.",
+          "ssml": "They're CAMS model forecasts, <break time=\"100ms\"/> via <sub alias=\"Open Meteo\">Open-Meteo</sub>. <break time=\"250ms\"/> Not readings from <sub alias=\"C P C B\">CPCB</sub> monitoring stations, <break time=\"200ms\"/> and every screen says so.",
+          "visual": {
+            "type": "app",
+            "from": 33.6,
+            "to": 37.2,
+            "camera": [
+              [
+                60,
+                160,
+                1000
+              ],
+              [
+                100,
+                190,
+                880
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.15,
+                "rect": [
+                  160,
+                  252,
+                  330,
+                  72
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "provenance-3",
+          "say": "The AQI follows India's national method and CPCB breakpoints, in tested, deterministic code.",
+          "ssml": "The <sub alias=\"A Q I\">AQI</sub> follows India's national method and <sub alias=\"C P C B\">CPCB</sub> breakpoints, <break time=\"200ms\"/> in tested, <break time=\"100ms\"/> deterministic code.",
+          "visual": {
+            "type": "app",
+            "from": 73.5,
+            "to": 78.3,
+            "label": "GET /aqi · live API response",
+            "camera": [
+              [
+                0,
+                0,
+                1440
+              ],
+              [
+                100,
+                12,
+                760
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.3,
+                "rect": [
+                  218,
+                  33,
+                  620,
+                  18
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "outlook",
+      "chapter": "04",
+      "title": "The next 72 hours",
+      "beats": [
+        {
+          "id": "outlook-2",
+          "say": "To plan ahead, the same policy runs hour by hour, across the next 72 hours.",
+          "ssml": "To plan ahead, <break time=\"150ms\"/> the same policy runs hour by hour, <break time=\"150ms\"/> across the next 72 hours.",
+          "visual": {
+            "type": "app",
+            "from": 37.3,
+            "to": 43.2,
+            "camera": [
+              [
+                0,
+                30,
+                1440
+              ],
+              [
+                40,
+                110,
+                1300
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.6,
+                "rect": [
+                  164,
+                  388,
+                  1112,
+                  24
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "outlook-3",
+          "say": "It finds the best school window: tomorrow morning, AQI 108.",
+          "ssml": "It finds the best school window: <break time=\"200ms\"/> tomorrow morning, <break time=\"100ms\"/> <sub alias=\"A Q I\">AQI</sub> 108.",
+          "visual": {
+            "type": "app",
+            "from": 43.2,
+            "to": 46.2,
+            "camera": [
+              [
+                100,
+                110,
+                1100
+              ],
+              [
+                130,
+                130,
+                1000
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.15,
+                "rect": [
+                  164,
+                  164,
+                  366,
+                  196
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "outlook-4",
+          "say": "And it flags what changes: at 4:30 this afternoon, move assembly, PE and sports indoors.",
+          "ssml": "And it flags what changes: <break time=\"200ms\"/> at 4:30 this afternoon, <break time=\"150ms\"/> move assembly, <sub alias=\"P E\">PE</sub> and sports indoors.",
+          "visual": {
+            "type": "app",
+            "from": 46.2,
+            "to": 49.4,
+            "camera": [
+              [
+                300,
+                110,
+                1100
+              ],
+              [
+                380,
+                130,
+                1000
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.15,
+                "rect": [
+                  536,
+                  164,
+                  366,
+                  196
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "outlook-5",
+          "say": "Only weekdays count as school windows.",
+          "ssml": "Only weekdays count as school windows.",
+          "visual": {
+            "type": "app",
+            "from": 49.4,
+            "to": 51,
+            "camera": [
+              [
+                100,
+                280,
+                1000
+              ],
+              [
+                120,
+                290,
+                920
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.15,
+                "rect": [
+                  390,
+                  456,
+                  210,
+                  190
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "notices",
+      "chapter": "05",
+      "title": "A note for parents",
+      "beats": [
+        {
+          "id": "notices-1",
+          "say": "Then, one tap turns today's decision into a note for parents.",
+          "ssml": "Then, <break time=\"150ms\"/> one tap turns today's decision into a note for parents.",
+          "visual": {
+            "type": "app",
+            "from": 52.4,
+            "to": 57.6,
+            "camera": [
+              [
+                0,
+                0,
+                1440
+              ],
+              [
+                80,
+                40,
+                1240
+              ]
+            ]
+          }
+        },
+        {
+          "id": "notices-2",
+          "say": "In English, or in Hindi.",
+          "ssml": "In English, <break time=\"250ms\"/> or in Hindi.",
+          "visual": {
+            "type": "app",
+            "from": 59.6,
+            "to": 63.6,
+            "camera": [
+              [
+                80,
+                40,
+                1240
+              ],
+              [
+                100,
+                40,
+                1180
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.05,
+                "rect": [
+                  164,
+                  280,
+                  212,
+                  34
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "notices-3",
+          "say": "Every notice comes from fixed, verified templates. It repeats the decision; it never changes it.",
+          "ssml": "Every notice comes from fixed, <break time=\"100ms\"/> verified templates. <break time=\"300ms\"/> It repeats the decision; <break time=\"200ms\"/> it never changes it.",
+          "visual": {
+            "type": "app",
+            "from": 63.6,
+            "to": 68.6,
+            "camera": [
+              [
+                200,
+                120,
+                1100
+              ],
+              [
+                260,
+                220,
+                1000
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.1,
+                "rect": [
+                  540,
+                  688,
+                  480,
+                  22
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "notices-4",
+          "say": "Nothing reaches parents until a teacher shares it.",
+          "ssml": "Nothing reaches parents until a teacher shares it.",
+          "visual": {
+            "type": "app",
+            "from": 68.6,
+            "to": 73.1,
+            "camera": [
+              [
+                260,
+                220,
+                1000
+              ],
+              [
+                300,
+                250,
+                960
+              ]
+            ],
+            "spots": [
+              {
+                "at": 0.15,
+                "rect": [
+                  542,
+                  722,
+                  320,
+                  50
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "notices-5",
+          "say": "And it all works on a phone.",
+          "ssml": "And it all works on a phone.",
+          "visual": {
+            "type": "phone",
+            "from": 3.2,
+            "to": 9.6,
+            "still": 66
+          },
+          "min": 5.2
+        }
+      ]
+    },
+    {
+      "id": "aws",
+      "chapter": "06",
+      "title": "Built on AWS",
+      "beats": [
+        {
+          "id": "aws-1",
+          "say": "Under the hood, it's serverless, on AWS.",
+          "ssml": "Under the hood, <break time=\"150ms\"/> it's serverless, <break time=\"100ms\"/> on <sub alias=\"A W S\">AWS</sub>.",
+          "visual": {
+            "type": "diagram"
+          },
+          "min": 6.5
+        },
+        {
+          "id": "aws-2",
+          "say": "CloudFront serves the app from a private S3 bucket.",
+          "ssml": "CloudFront serves the app from a private <sub alias=\"S 3\">S3</sub> bucket.",
+          "visual": {
+            "type": "shots",
+            "shots": [
+              {
+                "file": "A7-cloudfront-origin.png",
+                "node": "cloudfront",
+                "label": "CloudFront (global) · S3 origin via Origin Access Control",
+                "focus": [
+                  380,
+                  230,
+                  1500,
+                  590
+                ]
+              },
+              {
+                "file": "A8-s3-public-access.png",
+                "node": "s3",
+                "label": "S3 · Block all public access: On",
+                "focus": [
+                  380,
+                  440,
+                  1490,
+                  520
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aws-3",
+          "say": "In the Mumbai region, API Gateway calls two Python Lambda functions,",
+          "ssml": "In the Mumbai region, <break time=\"150ms\"/> <sub alias=\"A P I\">API</sub> Gateway calls two Python Lambda functions,",
+          "visual": {
+            "type": "shots",
+            "shots": [
+              {
+                "file": "A5-api-routes.png",
+                "node": "apigw",
+                "label": "API Gateway HTTP API · /aqi and /forecast routes",
+                "focus": [
+                  380,
+                  250,
+                  1510,
+                  560
+                ]
+              },
+              {
+                "file": "A3-lambda-functions.png",
+                "node": "lambda",
+                "label": "Lambda · two Python 3.13 functions (ap-south-1)",
+                "focus": [
+                  20,
+                  330,
+                  1520,
+                  360
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aws-4",
+          "say": "and DynamoDB caches forecasts, so we don't keep calling the provider.",
+          "ssml": "and <sub alias=\"Dynamo D B\">DynamoDB</sub> caches forecasts, <break time=\"150ms\"/> so we don't keep calling the provider.",
+          "visual": {
+            "type": "shots",
+            "shots": [
+              {
+                "file": "A6-dynamodb-cache-item.png",
+                "node": "dynamodb",
+                "label": "DynamoDB · forecast cache item with TTL",
+                "focus": [
+                  780,
+                  620,
+                  1100,
+                  300
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aws-5",
+          "say": "Both stacks are defined in SAM and deployed with the SAM CLI.",
+          "ssml": "Both stacks are defined in SAM, <break time=\"100ms\"/> and deployed with the <sub alias=\"SAM C L I\">SAM CLI</sub>.",
+          "visual": {
+            "type": "shots",
+            "shots": [
+              {
+                "file": "A1-cloudformation-stacks.png",
+                "node": "sam",
+                "label": "CloudFormation · saanssafe-dev + saanssafe-web, deployed with SAM",
+                "focus": [
+                  330,
+                  230,
+                  1570,
+                  440
+                ]
+              },
+              {
+                "file": "A2-cloudformation-resources.png",
+                "node": "sam",
+                "label": "saanssafe-web stack · CloudFront, Origin Access Control, private S3",
+                "focus": [
+                  920,
+                  440,
+                  980,
+                  500
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "chapter": "07",
+      "title": "How we built it",
+      "beats": [
+        {
+          "id": "build-1",
+          "say": "We built SaansSafe with Claude Code, and tested it: 637 backend tests, 83 frontend.",
+          "ssml": "We built <sub alias=\"Saans Safe\">SaansSafe</sub> with Claude Code, <break time=\"150ms\"/> and tested it: <break time=\"200ms\"/> 637 backend tests, <break time=\"100ms\"/> 83 frontend.",
+          "visual": {
+            "type": "build"
+          }
+        },
+        {
+          "id": "build-2",
+          "say": "But no language model calculates the AQI, makes the decision, or writes the notices.",
+          "ssml": "But no language model calculates the <sub alias=\"A Q I\">AQI</sub>, <break time=\"150ms\"/> makes the decision, <break time=\"150ms\"/> or writes the notices.",
+          "visual": {
+            "type": "deterministic"
+          },
+          "tail": 0.6
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "chapter": "",
+      "title": "",
+      "beats": [
+        {
+          "id": "end-1",
+          "say": "So every school morning starts with a clear plan.",
+          "ssml": "So every school morning <break time=\"100ms\"/> starts with a clear plan.",
+          "visual": {
+            "type": "closing"
+          }
+        },
+        {
+          "id": "end-2",
+          "say": "SaansSafe. Clearer air decisions for schools.",
+          "ssml": "<sub alias=\"Saans Safe\">SaansSafe</sub>. <break time=\"450ms\"/> Clearer air decisions for schools.",
+          "visual": {
+            "type": "end"
+          },
+          "min": 6,
+          "tail": 1.8
+        }
+      ]
+    }
+  ]
+}

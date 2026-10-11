@@ -10,8 +10,8 @@ Deadline: **Sun Oct 11, 2026**. The form opens 08:00 IST; the exact closing time
 
 ## Repository (public)
 - [ ] First commit is after the kickoff. The first commit (`a523bc3`) is 2026-10-08 10:36 IST; confirm against the official kickoff time once it's published
-- [ ] Repo is **public**, opens in a signed-out browser (no git remote is configured yet)
-- [ ] README: problem, who it's for, features, screenshots, **live URL**, **architecture diagram**, AWS services and why, setup and deploy (`sam deploy` per stack; no `sam build` step), video link. Everything is done except the video link
+- [x] Repo is **public**: https://github.com/bled1908/SaansSafe (HTTP 200 signed out, 11 Oct). Push the final docs/video source before submitting
+- [x] README: problem, who it's for, features, screenshots, **live URL**, **architecture diagram**, AWS services and why, setup and deploy (`sam deploy` per stack; no `sam build` step), **video link**, team name
 - [x] LICENSE file (MIT)
 - [x] Credits: every third-party library, API and data source (Open-Meteo, Copernicus CAMS, CPCB report, npm/Python libraries, fonts) in the README
 - [x] AI coding tools disclosed (Claude Code) in the README
@@ -24,21 +24,23 @@ Deadline: **Sun Oct 11, 2026**. The form opens 08:00 IST; the exact closing time
 - [ ] Budgets alarm set. Free-tier and credits usage checked
 
 ## Demo video
-- [ ] **≤ 3:00** (target 2:40–2:50)
-- [ ] Uploaded to **YouTube**, **public or unlisted**
-- [ ] Link opens in a **signed-out / incognito** browser
-- [ ] Shows: the problem, who it's for, the working core flow end to end
-- [ ] **Shows the AWS use on screen** (architecture plus console/deploy), not just mentioned
-- [ ] Every feature claimed in the writeup appears in the video
-- [ ] Audio clear, captions/subtitles added
+Link: **https://www.youtube.com/watch?v=7fcaFbYrZwM** · source and build steps in [`video/`](video/README.md)
+- [x] **≤ 3:00**: 2:43.9 (validated: H.264, 1920×1080, 30 fps, AAC)
+- [x] Uploaded to **YouTube**, **public or unlisted**
+- [x] Link opens signed out (YouTube oEmbed and watch page reachable without login, 11 Oct); still worth one incognito playback at 1080p
+- [x] Shows: the problem, who it's for, the working core flow end to end (decision, Mumbai, data source, 72-hour outlook, English/Hindi notice, phone)
+- [x] **Shows the AWS use on screen**: architecture diagram plus redacted console screenshots (CloudFront, S3, API Gateway, Lambda, DynamoDB, CloudFormation/SAM)
+- [x] Every feature claimed in the writeup appears in the video (decision, 72-hour outlook, English/Hindi notice, provenance, phone, AWS)
+- [x] Captions burned in (music only, no narration); SRT available
+- [ ] YouTube description: add the live and repo links once the channel is verified for links
 
-## Writeup
-- [ ] The problem (a specific user, a specific place)
-- [ ] What we built and how
-- [ ] Where AWS fits (each service and why)
-- [ ] AI coding tools used
-- [ ] What fought back / what we learned
-- [ ] Links: repo, live URL, video, blog
+## Writeup ([WRITEUP.md](WRITEUP.md); paste into the form, trimming if it has a length limit)
+- [x] The problem (a specific user, a specific place)
+- [x] What we built and how
+- [x] Where AWS fits (each service and why)
+- [x] AI coding tools used
+- [x] What fought back / what we learned
+- [x] Links: repo, live URL, video (blog optional; add if published)
 
 ## Submission form
 - [ ] Final smoke test on the live URL just before submitting

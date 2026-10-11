@@ -2,9 +2,11 @@
 
 **Can students go outside today?** SaansSafe turns India's air-quality forecast into a clear, explainable plan for school assembly, PE and sports, and recess, plus a parent notice in English or Hindi.
 
-Built for **Environmental Hacks** (Bharat Builds Tour, WeMakeDevs × AWS, Oct 8–11 2026), **Air track**.
+Built for **Environmental Hacks** (Bharat Builds Tour, WeMakeDevs × AWS, Oct 8–11 2026), **Air track**, by team **Shadow Protocol** (Subhadeep Roy and Sneha Singha).
 
-**Live app: https://d316zs0sydbi1r.cloudfront.net** · Demo video: _link added at submission_
+**Live app: https://d316zs0sydbi1r.cloudfront.net** · **Demo video (2:44): https://www.youtube.com/watch?v=7fcaFbYrZwM** · [Writeup](WRITEUP.md)
+
+[![SaansSafe demo video: Can students go outside today?](https://i.ytimg.com/vi/7fcaFbYrZwM/hqdefault.jpg)](https://www.youtube.com/watch?v=7fcaFbYrZwM)
 
 | Today's decision (mobile) | 72-hour school outlook | Parent notice in Hindi |
 |---|---|---|
@@ -120,6 +122,7 @@ backend/
 frontend/            React 19 + Vite + TypeScript + Tailwind CSS v4
 infra/web/           SAM: private S3 bucket + CloudFront (OAC)
 docs/screenshots/    screenshots of the live app
+video/               the demo video: Remotion edit, Playwright capture script, generated score
 ```
 
 ## Run it locally
@@ -198,6 +201,16 @@ aws s3 rm s3://<BucketName> --recursive                     # the bucket must be
 
 SAM's own artifact bucket stack (`aws-sam-cli-managed-default`) is shared and is not removed by these commands.
 
+## Demo video
+
+**Watch: https://www.youtube.com/watch?v=7fcaFbYrZwM** (2:44, captions burned in, music only).
+
+The video is built reproducibly in [`video/`](video/README.md):
+- **Footage:** real Playwright recordings of the live site (desktop and a 390 px phone) and the live `GET /aqi` response, captured in one session on 11 Oct 2026 (01:01 IST). Nothing is mocked or edited; the only addition is a visible cursor.
+- **AWS evidence:** genuine AWS Console screenshots of the deployed stacks, with the account ID, user name and ARNs covered by solid boxes.
+- **Edit:** composed in [Remotion](https://www.remotion.dev/) (React). Spotlights, captions and the architecture diagram are drawn over the footage; the footage itself is not colour-graded or altered.
+- **Music:** an original ambient score synthesised by a local script (`video/scripts/music.mjs`); no third-party or AI-generated audio, no narration.
+
 ## Limitations
 
 - Data are model forecasts for a coarse grid cell, not readings at the school gate or from a CPCB station.
@@ -220,9 +233,11 @@ SAM's own artifact bucket stack (`aws-sam-cli-managed-default`) is shared and is
 
 **AWS tooling:** [AWS SAM CLI](https://github.com/aws/aws-sam-cli) (Apache-2.0).
 
+**Demo video tooling** (`video/`, not part of the app): [Remotion](https://www.remotion.dev/) ([Remotion License](https://www.remotion.dev/license); free for individuals and teams of up to three, which covers this two-person student team), [Playwright](https://playwright.dev/) (Apache-2.0), React (MIT), TypeScript (Apache-2.0). Fonts in the video: Segoe UI Variable, Cascadia Mono and Nirmala UI (Windows system fonts).
+
 ## AI tools used
 
-- **Claude Code (Anthropic)** was used throughout the build under the team's direction: planning, writing code and tests, code review, AWS deployment commands (each change set reviewed before execution), browser QA, and this documentation. Each milestone was reviewed and approved by the team before it was committed.
+- **Claude Code (Anthropic)** was used throughout the build under the team's direction: planning, writing code and tests, code review, AWS deployment commands (each change set reviewed before execution), browser QA, the demo-video pipeline (capture script, Remotion edit, generated score), and this documentation. Each milestone was reviewed and approved by the team before it was committed.
 - The **running app uses no AI**. Decisions, numbers and parent notices are deterministic (see [AI status](#ai-status-strands-agents--amazon-bedrock)).
 
 ## License

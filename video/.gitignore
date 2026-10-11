@@ -1,0 +1,17 @@
+# Dependencies and Remotion caches
+node_modules/
+.remotion/
+
+# Unredacted originals and all generated media stay local
+assets/aws/
+public/aws/
+public/captures/
+public/audio/
+captures/
+out/
+*.mp4
+*.webm
+*.mov
+*.mp3
+*.wav
+*.m4a

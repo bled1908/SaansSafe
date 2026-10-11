@@ -1,0 +1,31 @@
+{
+  "name": "saanssafe-video",
+  "private": true,
+  "version": "0.1.0",
+  "description": "SaansSafe hackathon submission video (Remotion + Playwright captures)",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "redact": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/redact-aws.ps1",
+    "record": "node scripts/record.mjs",
+    "captions": "node scripts/captions.mjs",
+    "render:draft": "node scripts/music.mjs && remotion render src/index.ts SaansSafeDraft out/saanssafe-v2-draft.mp4 --codec=h264 --crf=18",
+    "render:final": "node scripts/music.mjs --final && remotion render src/index.ts SaansSafeFinal out/saanssafe-v2-final.mp4 --codec=h264 --crf=18",
+    "validate": "node scripts/validate.mjs",
+    "typecheck": "tsc --noEmit",
+    "music": "node scripts/music.mjs",
+    "render:music": "node scripts/music.mjs && remotion render src/index.ts SaansSafeMusicOnly out/saanssafe-final-music-only.mp4 --codec=h264 --crf=18 --concurrency=3 --offthreadvideo-cache-size-in-bytes=536870912"
+  },
+  "dependencies": {
+    "@remotion/captions": "4.0.529",
+    "@remotion/cli": "4.0.529",
+    "playwright-core": "1.63.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "7.0.2"
+  }
+}
